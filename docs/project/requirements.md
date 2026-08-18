@@ -222,6 +222,42 @@ The platform serves the agricultural value chain: farmers, buyers, suppliers, ad
 
 ---
 
+## Verification Status & Discrepancies
+
+This section records what has been verified against the official design references on Day One.
+
+### Database (verified)
+
+The official database diagram was inspected and its actual schema verified:
+
+- **Reference:** https://dbdiagram.io/d/Agricultural-Super-App-6a841d04fd15a881e5a6b86a
+- **Finding:** the diagram is named "Agricultural Super App" but its schema is a **community/social model** (`users`, `profiles`, `posts`, `post_images`, `comments`, `likes`, `communities`, `community_members`, `user_follows`, `conversations`, `conversation_participants`, `messages`).
+- **Coverage:** only **User Accounts & Authentication (FR-1.x)** is partially represented (via `users` and `profiles`).
+- **Gap:** all agricultural modules (farmers, farms, crops, livestock, inputs, marketplace, produce, orders, payments, notifications, administration, reporting) have **no database representation** in the official diagram.
+
+Full analysis: [requirements-to-database.md](requirements-to-database.md)
+
+### Design (unverified)
+
+- **Reference:** https://www.figma.com/make/HqRJlUNybCkDNSuy0TMeQj/Agricultural-Super-App-Development
+- **Finding:** the Figma design **could not be inspected from the automation environment** (HTTP 403 on page and API; the embed returns an auth-gated loading shell only). Owner access was granted to Collins (confirmed by Razia), so inspection is possible from his browser but has not been performed/recorded yet.
+- **Implication:** design traceability is documented but every entry is marked **Not verified** until the Figma can be reviewed.
+
+Full analysis: [requirements-to-design.md](requirements-to-design.md)
+
+### Community/social tables present in the database but absent from requirements
+
+The official diagram contains community/social tables (`posts`, `comments`, `likes`, `communities`, `user_follows`, `conversations`, `messages`) that do not correspond to any current requirement. Per project rules, this is **documented as a discrepancy** rather than silently added as requirements. If the product is intended to include a community/social module, it must be confirmed and then added to this document with defined requirements.
+
+### Open items requiring mentor clarification
+
+1. Is the shared dbdiagram the intended Agricultural Super App schema, or was the wrong diagram shared?
+2. Should the product include a community/social module (posts, communities, messaging)?
+3. How should the agricultural data model (farms, crops, orders, payments, etc.) be represented in the official diagram?
+4. Collins now has Figma owner access (per Razia); he must inspect the design in the browser and record the verified screens. A Figma personal access token or view-only share link would also enable programmatic verification.
+
+---
+
 ## Out of Scope (Day 1)
 
 During Day 1 the following are explicitly **not** in scope:

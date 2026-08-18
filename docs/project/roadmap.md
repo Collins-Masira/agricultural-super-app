@@ -8,8 +8,8 @@ This roadmap breaks the Agricultural Super App into logical development stages. 
 
 ## Table of Contents
 
-- [Stage 1 — Foundation](#stage-1--foundation)
-- [Stage 2 — Core Application Foundation](#stage-2--core-application-foundation)
+- [Stage 1 — Product & Technical Foundation](#stage-1--product--technical-foundation)
+- [Stage 2 — Technology Selection & Application Scaffolding](#stage-2--technology-selection--application-scaffolding)
 - [Stage 3 — Authentication & User Management](#stage-3--authentication--user-management)
 - [Stage 4 — Farmer & Farm Management](#stage-4--farmer--farm-management)
 - [Stage 5 — Agricultural Inventory & Inputs](#stage-5--agricultural-inventory--inputs)
@@ -23,24 +23,29 @@ This roadmap breaks the Agricultural Super App into logical development stages. 
 
 ---
 
-## Stage 1 — Foundation
+## Stage 1 — Product & Technical Foundation
 
 **Status:** In progress
 
 - [x] Establish project identity and repository structure.
 - [x] Establish documentation structure.
 - [x] Document functional and non-functional requirements.
+- [x] Reference the official **Figma** product design.
+- [x] Reference and inspect the official **dbdiagram** database design.
 - [x] Document architecture direction.
+- [x] Document design foundation and design traceability.
+- [x] Document database foundation and database traceability.
+- [x] Document product/data flows.
 - [x] Document development standards.
-- [x] Document data model direction.
-- [x] Document design foundation.
 - [x] Configure `.gitignore`.
 - [x] Document the CI plan.
-- [ ] Create baseline commit on `develop`.
+- [x] Create baseline commit on `develop`.
+- [ ] Resolve database diagram discrepancy (schema does not represent agricultural requirements).
+- [ ] Verify the Figma design (currently not accessible from this environment).
 
-**Exit criteria:** A clean, documented, version-controlled foundation with no application code.
+**Exit criteria:** A clean, documented, version-controlled foundation with no application code and no unresolved contradictions between the requirements, Figma, database, architecture, and roadmap.
 
-## Stage 2 — Core Application Foundation
+## Stage 2 — Technology Selection & Application Scaffolding
 
 **Status:** Not started
 
@@ -137,8 +142,8 @@ This roadmap breaks the Agricultural Super App into logical development stages. 
 
 | Stage | Status |
 | --- | --- |
-| Stage 1 — Foundation | **In progress** |
-| Stage 2 — Core Application Foundation | Not started |
+| Stage 1 — Product & Technical Foundation | **In progress** |
+| Stage 2 — Technology Selection & Application Scaffolding | Not started |
 | Stage 3 — Authentication & User Management | Not started |
 | Stage 4 — Farmer & Farm Management | Not started |
 | Stage 5 — Agricultural Inventory & Inputs | Not started |
@@ -153,7 +158,7 @@ This roadmap breaks the Agricultural Super App into logical development stages. 
 Cross-cutting requirements that apply across all stages:
 
 - [ ] Requirements updated in `docs/project/requirements.md` for every implemented feature.
-- [ ] Data model changes reflected in `docs/database/`.
+- [ ] Data model changes reflected in `docs/database.md` and `docs/schema.dbml`.
 - [ ] Tests written and passing for every implemented feature.
 - [ ] CI passing on every pull request.
 - [ ] No secrets or local configuration committed.

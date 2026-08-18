@@ -42,11 +42,11 @@ Language-specific naming will be defined when the stack is selected. General pri
 
 - `backend/` — backend API, services, and background jobs.
 - `frontend/` — web and/or mobile client(s).
-- `docs/` — all project documentation, grouped by domain:
-  - `docs/project/` — requirements, roadmap, standards.
-  - `docs/architecture/` — architecture overview and decisions.
-  - `docs/database/` — data model documentation.
-  - `docs/design/` — design and UX documentation.
+- `docs/` — all project documentation:
+  - `docs/project/` — requirements, roadmap, standards, traceability.
+  - `docs/architecture.md` — architecture overview and decisions.
+  - `docs/database.md` — data model documentation.
+  - `docs/design.md` — design and UX documentation.
 - `.github/workflows/` — CI/CD configuration and plan.
 
 Each application folder will define its own internal structure when the stack is chosen. Internal structure must be documented before it grows.
@@ -128,8 +128,8 @@ main
 ## Documentation Expectations
 
 - Every major feature has a requirements entry in `docs/project/requirements.md`.
-- Architectural decisions are captured in `docs/architecture/`.
-- Data model changes are reflected in `docs/database/`.
+- Architectural decisions are captured in `docs/architecture.md`.
+- Data model changes are reflected in `docs/database.md` and `docs/schema.dbml`.
 - Documentation is updated in the same change as the code it describes.
 - Documentation describes reality; planned items are explicitly marked as planned.
 

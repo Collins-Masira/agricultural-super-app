@@ -1,0 +1,69 @@
+name: Repository Foundation CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+
+jobs:
+  foundation-checks:
+    name: Day 1 Foundation Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required documentation structure
+        run: |
+          set -euo pipefail
+          for file in \
+            README.md \
+            .gitignore \
+            backend/README.md \
+            frontend/README.md \
+            docs/architecture.md \
+            docs/database.md \
+            docs/design.md \
+            docs/product-data-flow.md \
+            docs/schema.dbml \
+            docs/project/git-workflow.md \
+            docs/project/task-tracker.md \
+            docs/project/day1-status.md; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required Day 1 file: $file"
+              exit 1
+            fi
+          done
+          echo "All Day 1 documentation files present."
+
+      - name: Validate schema.dbml contains all MVP tables
+        run: |
+          set -euo pipefail
+          for table in \
+            users profiles posts post_images comments likes communities \
+            community_members community_follows user_follows conversations \
+            conversation_participants messages; do
+            if ! grep -qE "^Table ${table} \{" docs/schema.dbml; then
+              echo "Missing table in schema.dbml: ${table}"
+              exit 1
+            fi
+          done
+          echo "All 13 MVP tables present in schema.dbml."
+
+      - name: Check for accidentally committed secrets
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify HEAD >/dev/null 2>&1; then
+            if git grep -nE "(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|password_hash\s*=\s*['\"][^'\"]{4,}|api[_-]?key\s*=\s*['\"][^'\"]{4,})" -- ':!*.dbml' ':!docs/database.md' ':!docs/project/requirements-to-database.md' >/dev/null 2>&1; then
+              echo "Potential secret pattern found in tracked files."
+              exit 1
+            fi
+          fi
+          echo "No obvious secret patterns detected."
+
+      - name: Confirm frontend/ and backend/ exist in the same repository
+        run: |
+          set -euo pipefail
+          test -d frontend || { echo "frontend/ missing"; exit 1; }
+          test -d backend || { echo "backend/ missing"; exit 1; }
+          echo "frontend/ and backend/ present in the same repository."

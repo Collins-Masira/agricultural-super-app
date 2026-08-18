@@ -1,0 +1,197 @@
+// ============================================================
+// Agricultural Super App — CURRENT VERIFIED DATABASE SCHEMA (DBML)
+// ============================================================
+// STATUS: This is the current verified schema, consistent with the
+// supplied dbdiagram (community/social model) and the confirmed
+// MVP. It is NOT the final approved Agricultural Super App
+// database.
+//
+// The current schema models the social agricultural community
+// platform. The broader agricultural requirements (farms, crops,
+// livestock, marketplace, products, orders, payments, weather) are
+// OUT OF MVP SCOPE and are NOT represented here. Whether they
+// belong in this schema is an open discrepancy awaiting Technical
+// Mentor clarification.
+//
+// MVP scope: social agricultural community platform.
+// Explicitly out of MVP scope: farms, crops, livestock,
+// marketplace, products, orders, payments, weather.
+//
+// Experts are represented as users with role = 'expert'.
+// No separate experts table is required.
+//
+// This file is the in-repository working schema for the current
+// MVP (the 12 tables verified in the supplied dbdiagram plus the
+// confirmed MVP refinements: community_follows, profiles.is_verified,
+// conversations.community_id). It is maintained here and is
+// paste-able into dbdiagram.io to update the hosted diagram
+// (https://dbdiagram.io/d/Agricultural-Super-App-6a841d04fd15a881e5a6b86a).
+// ============================================================
+
+Table users {
+  id integer [pk, increment]
+  username varchar(50) [unique, not null]
+  email varchar(255) [unique, not null]
+  password_hash text [not null]
+  role varchar(30) [default: 'farmer']  // 'farmer' | 'expert' | 'admin'
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table profiles {
+  id integer [pk, increment]
+  user_id integer [unique, not null]
+  first_name varchar(100)
+  last_name varchar(100)
+  bio text
+  location varchar(255)
+  profile_image_url text
+  phone_number varchar(30)
+  is_verified boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table posts {
+  id integer [pk, increment]
+  user_id integer [not null]
+  title varchar(255) [not null]
+  content text [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table post_images {
+  id integer [pk, increment]
+  post_id integer [not null]
+  image_url text [not null]
+  created_at timestamp [default: `now()`]
+}
+
+Table comments {
+  id integer [pk, increment]
+  user_id integer [not null]
+  post_id integer [not null]
+  content text [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table likes {
+  id integer [pk, increment]
+  user_id integer [not null]
+  post_id integer [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, post_id) [unique]
+  }
+}
+
+Table communities {
+  id integer [pk, increment]
+  name varchar(150) [unique, not null]
+  description text
+  image_url text
+  created_by integer [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table community_members {
+  id integer [pk, increment]
+  user_id integer [not null]
+  community_id integer [not null]
+  joined_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, community_id) [unique]
+  }
+}
+
+Table community_follows {
+  id integer [pk, increment]
+  user_id integer [not null]
+  community_id integer [not null]
+  followed_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, community_id) [unique]
+  }
+}
+
+Table user_follows {
+  id integer [pk, increment]
+  follower_id integer [not null]
+  following_id integer [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (follower_id, following_id) [unique]
+  }
+
+  Note: 'Self-follow is not allowed (follower_id != following_id)'
+}
+
+Table conversations {
+  id integer [pk, increment]
+  community_id integer [null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table conversation_participants {
+  id integer [pk, increment]
+  conversation_id integer [not null]
+  user_id integer [not null]
+  joined_at timestamp [default: `now()`]
+
+  indexes {
+    (conversation_id, user_id) [unique]
+  }
+}
+
+Table messages {
+  id integer [pk, increment]
+  conversation_id integer [not null]
+  sender_id integer [not null]
+  content text [not null]
+  is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+}
+
+// ============================================================
+// Relationships
+// ============================================================
+
+Ref: profiles.user_id - users.id [delete: cascade]
+
+Ref: posts.user_id > users.id [delete: restrict]
+
+Ref: post_images.post_id > posts.id [delete: cascade]
+
+Ref: comments.user_id > users.id [delete: cascade]
+Ref: comments.post_id > posts.id [delete: cascade]
+
+Ref: likes.user_id > users.id [delete: cascade]
+Ref: likes.post_id > posts.id [delete: cascade]
+
+Ref: communities.created_by > users.id [delete: restrict]
+
+Ref: community_members.user_id > users.id [delete: cascade]
+Ref: community_members.community_id > communities.id [delete: cascade]
+
+Ref: community_follows.user_id > users.id [delete: cascade]
+Ref: community_follows.community_id > communities.id [delete: cascade]
+
+Ref: user_follows.follower_id > users.id [delete: cascade]
+Ref: user_follows.following_id > users.id [delete: cascade]
+
+Ref: conversations.community_id > communities.id [delete: cascade]
+
+Ref: conversation_participants.conversation_id > conversations.id [delete: cascade]
+Ref: conversation_participants.user_id > users.id [delete: cascade]
+
+Ref: messages.conversation_id > conversations.id [delete: cascade]
+Ref: messages.sender_id > users.id [delete: cascade]
