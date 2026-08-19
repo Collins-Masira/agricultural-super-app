@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Application shell — layout styles
+   Desktop: top header with horizontal nav. Mobile: header brand + bottom nav.
+   ========================================================================== */
+
+.asa-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.asa-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asa-header__brand {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.asa-header__brand:hover {
+  text-decoration: none;
+}
+.asa-header__brand-accent {
+  color: var(--color-primary);
+}
+
+.asa-header__nav {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.asa-header__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.asa-header__link:hover {
+  background-color: var(--color-surface-muted);
+  text-decoration: none;
+}
+.asa-header__link--active {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.asa-main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
+}
+
+.asa-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  height: var(--bottom-nav-height);
+  display: flex;
+  align-items: stretch;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.asa-bottom-nav__link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.asa-bottom-nav__link:hover {
+  text-decoration: none;
+}
+.asa-bottom-nav__link--active {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-header__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+@media (min-width: 40rem) {
+  .asa-main {
+    padding-bottom: var(--space-7);
+  }
+
+  .asa-header__nav {
+    display: flex;
+  }
+
+  .asa-bottom-nav {
+    display: none;
+  }
+}

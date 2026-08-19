@@ -1,0 +1,121 @@
+import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button, Input, PageHeader, Textarea } from '@/components/ui'
+import { profileService } from '@/services'
+import { useAuth, errorMessage } from '@/features/auth/AuthContext'
+
+interface ProfileForm {
+  firstName: string
+  lastName: string
+  bio: string
+  location: string
+  phoneNumber: string
+  profileImageUrl: string
+}
+
+export function EditProfilePage() {
+  const { user, refreshProfile } = useAuth()
+  const navigate = useNavigate()
+
+  const [form, setForm] = useState<ProfileForm>({
+    firstName: user?.profile.firstName ?? '',
+    lastName: user?.profile.lastName ?? '',
+    bio: user?.profile.bio ?? '',
+    location: user?.profile.location ?? '',
+    phoneNumber: user?.profile.phoneNumber ?? '',
+    profileImageUrl: user?.profile.profileImageUrl ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function setField<K extends keyof ProfileForm>(key: K, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!user || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await profileService.updateProfile(user.user.id, {
+        firstName: form.firstName.trim() || null,
+        lastName: form.lastName.trim() || null,
+        bio: form.bio.trim() || null,
+        location: form.location.trim() || null,
+        phoneNumber: form.phoneNumber.trim() || null,
+        profileImageUrl: form.profileImageUrl.trim() || null,
+      })
+      refreshProfile(updated)
+      navigate('/profile', { replace: true })
+    } catch (err) {
+      setError(errorMessage(err))
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <PageHeader title="Edit profile" subtitle="Update your public information." />
+      <form onSubmit={handleSubmit}>
+        <Input
+          label="Profile image URL"
+          name="profileImageUrl"
+          type="url"
+          value={form.profileImageUrl}
+          onChange={(e) => setField('profileImageUrl', e.target.value)}
+          hint="A publicly accessible image URL."
+        />
+        <Input
+          label="First name"
+          name="firstName"
+          autoComplete="given-name"
+          value={form.firstName}
+          onChange={(e) => setField('firstName', e.target.value)}
+        />
+        <Input
+          label="Last name"
+          name="lastName"
+          autoComplete="family-name"
+          value={form.lastName}
+          onChange={(e) => setField('lastName', e.target.value)}
+        />
+        <Textarea
+          label="Bio"
+          name="bio"
+          rows={4}
+          value={form.bio}
+          onChange={(e) => setField('bio', e.target.value)}
+        />
+        <Input
+          label="Location"
+          name="location"
+          value={form.location}
+          onChange={(e) => setField('location', e.target.value)}
+          placeholder="e.g. Nakuru, Kenya"
+        />
+        <Input
+          label="Phone number"
+          name="phoneNumber"
+          type="tel"
+          autoComplete="tel"
+          value={form.phoneNumber}
+          onChange={(e) => setField('phoneNumber', e.target.value)}
+        />
+        {error && (
+          <p className="asa-form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="asa-profile-edit__actions">
+          <Button type="submit" loading={saving}>
+            Save changes
+          </Button>
+          <Button variant="ghost" type="button" onClick={() => navigate('/profile')}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </>
+  )
+}
