@@ -10,7 +10,8 @@ The frontend is the user-facing application for the **Agricultural Super App**. 
 | --- | --- |
 | Build tool | Vite 5 |
 | Framework | React 18 (SPA) |
-| Language | TypeScript (strict) |
+| Language | JavaScript (ES modules) |
+| State management | Redux Toolkit (`@reduxjs/toolkit`) + `react-redux` |
 | Routing | React Router v6 |
 | Styling | Plain CSS with design tokens (`src/styles/tokens.css`) — no UI framework |
 | Package manager | npm |
@@ -28,8 +29,7 @@ npm run dev
 Commands:
 
 - `npm run dev` — start the Vite dev server (default http://localhost:5173)
-- `npm run build` — type-check and build for production
-- `npm run typecheck` — run the TypeScript compiler only
+- `npm run build` — build for production
 - `npm run preview` — preview the production build
 
 ## Folder Structure
@@ -38,8 +38,8 @@ Commands:
 frontend/
 ├── src/
 │   ├── components/ui/        # Reusable UI primitives (Button, Input, Card, Modal, …)
-│   ├── components/icons.tsx  # Inline SVG icons
-│   ├── config/env.ts         # Runtime config from environment variables
+│   ├── components/icons.jsx  # Inline SVG icons
+│   ├── config/env.js         # Runtime config from environment variables
 │   ├── features/             # Feature modules, each with pages/ and components/
 │   │   ├── auth/             # Login, registration, auth context, protected routes
 │   │   ├── layout/           # App shell: header nav, mobile bottom nav
@@ -48,23 +48,35 @@ frontend/
 │   │   └── profile/          # Current user profile, edit profile
 │   ├── lib/                  # HTTP client, formatting helpers
 │   ├── services/             # API service layer (auth, posts, experts, profiles)
+│   ├── store/                # Redux store and slices (auth, posts, experts, profile)
 │   ├── styles/               # Design tokens and global styles
-│   └── types/domain.ts       # Domain types mirroring docs/schema.dbml
+│   └── types/domain.js       # Domain shapes (JSDoc) mirroring docs/schema.dbml
 ├── .env.example              # Documented environment variables
 ├── index.html
-├── vite.config.ts
+├── vite.config.js
 └── package.json
 ```
+
+## State Management
+
+State is managed with Redux Toolkit:
+
+- `src/store/store.js` — the configured Redux store.
+- `src/store/slices/` — slices for auth (session + current user), posts (feed, post detail, user posts, likes, comments), experts (expert discovery, profiles, follow/unfollow), and profile (viewing/editing a profile).
+- `src/store/hooks.js` — typed hooks `useAppDispatch` / `useAppSelector`.
+- The auth layer (`src/features/auth/AuthContext.jsx`) sits on top of the `auth` slice and keeps the same `useAuth()` API the pages rely on (`status`, `user`, `login`, `register`, `logout`, `refreshProfile`).
+
+Slices call the existing service layer (`src/services`), which routes to the mock API by default and to the real Flask API once the backend contract is confirmed.
 
 ## Backend API Integration
 
 The backend is being developed separately. To avoid inventing production APIs, the frontend uses an **isolated mock data layer** by default:
 
-- `src/services/*.service.ts` — typed service functions (the boundary the UI uses).
+- `src/services/*.js` — service functions (the boundary the UI uses).
 - `src/services/mocks/` — mock implementations, clearly marked as development-only.
 - `VITE_USE_MOCKS=true` (default) routes the services to the mock layer; set it to `false` (and `VITE_API_BASE_URL`) once the backend API contract is confirmed.
 
-Service endpoint paths are conventional placeholders and must be reconciled with the backend team's actual API contract before they are enabled. See `src/services/experts.service.ts` and `src/services/posts.service.ts` for the expected shapes.
+Service endpoint paths are conventional placeholders and must be reconciled with the backend team's actual API contract before they are enabled. See `src/services/experts.service.js` and `src/services/posts.service.js` for the expected shapes.
 
 ## Design
 
@@ -87,7 +99,7 @@ Communities and messaging are owned by a separate frontend developer and are not
 
 | Item | Status |
 | --- | --- |
-| Technology stack | Selected (React + TS + Vite) |
+| Technology stack | Selected (React + JS + Redux Toolkit + Vite) |
 | Application code | Foundation + core MVP screens implemented |
 | Mock API layer | Present (development only) |
 | Real API integration | Blocked — backend API contract not yet available |
