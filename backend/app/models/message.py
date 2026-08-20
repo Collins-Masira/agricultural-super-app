@@ -37,8 +37,7 @@ class Message(db.Model):
 
     is_read = db.Column(
         db.Boolean,
-        default=False,
-        nullable=False
+        default=False
     )
 
     created_at = db.Column(

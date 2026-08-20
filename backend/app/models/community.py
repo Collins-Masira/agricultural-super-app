@@ -28,7 +28,7 @@ class Community(db.Model):
 
     created_by = db.Column(
         db.Integer,
-        db.ForeignKey("users.id", ondelete="CASCADE"),
+        db.ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False
     )
 
@@ -52,4 +52,16 @@ class Community(db.Model):
         "CommunityMember",
         back_populates="community",
         cascade="all, delete-orphan"
+    )
+
+    follows = db.relationship(
+        "CommunityFollow",
+        back_populates="community",
+        cascade="all, delete-orphan"
+    )
+
+    conversations = db.relationship(
+        "Conversation",
+        foreign_keys="Conversation.community_id",
+        back_populates="community"
     )

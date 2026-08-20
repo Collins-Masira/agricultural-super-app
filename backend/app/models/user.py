@@ -30,27 +30,23 @@ class User(db.Model):
 
     role = db.Column(
         db.String(30),
-        nullable=False,
         default="farmer"
     )
 
     is_active = db.Column(
         db.Boolean,
-        default=True,
-        nullable=False
+        default=True
     )
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        nullable=False
+        default=datetime.utcnow
     )
 
     updated_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False
+        onupdate=datetime.utcnow
     )
 
     # -------------------------
@@ -97,6 +93,33 @@ class User(db.Model):
     sent_messages = db.relationship(
         "Message",
         back_populates="sender"
+    )
+
+    following = db.relationship(
+        "UserFollow",
+        foreign_keys="UserFollow.follower_id",
+        back_populates="follower",
+        cascade="all, delete-orphan"
+    )
+
+    followers = db.relationship(
+        "UserFollow",
+        foreign_keys="UserFollow.following_id",
+        back_populates="following",
+        cascade="all, delete-orphan"
+    )
+
+    community_follows = db.relationship(
+        "CommunityFollow",
+        foreign_keys="CommunityFollow.user_id",
+        back_populates="follower",
+        cascade="all, delete-orphan"
+    )
+
+    conversations_created = db.relationship(
+        "Conversation",
+        foreign_keys="Conversation.created_by",
+        back_populates="creator"
     )
 
     # -------------------------

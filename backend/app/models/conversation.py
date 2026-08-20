@@ -12,6 +12,18 @@ class Conversation(db.Model):
         primary_key=True
     )
 
+    community_id = db.Column(
+        db.Integer,
+        db.ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=True
+    )
+
+    created_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow
@@ -21,6 +33,16 @@ class Conversation(db.Model):
         db.DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow
+    )
+
+    community = db.relationship(
+        "Community",
+        back_populates="conversations"
+    )
+
+    creator = db.relationship(
+        "User",
+        back_populates="conversations_created"
     )
 
     participants = db.relationship(
