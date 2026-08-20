@@ -25,7 +25,8 @@ class PostImage(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        nullable=False
     )
 
     post = db.relationship(
