@@ -26,7 +26,8 @@ class CommunityMember(db.Model):
 
     joined_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        nullable=False
     )
 
     user = db.relationship(

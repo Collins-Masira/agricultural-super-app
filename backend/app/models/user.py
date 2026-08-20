@@ -99,6 +99,12 @@ class User(db.Model):
         back_populates="sender"
     )
 
+    conversation_participations = db.relationship(
+        "ConversationParticipant",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
     # -------------------------
     # Password methods
     # -------------------------

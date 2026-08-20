@@ -32,7 +32,8 @@ class ConversationParticipant(db.Model):
 
     joined_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        nullable=False
     )
 
     conversation = db.relationship(
@@ -41,7 +42,8 @@ class ConversationParticipant(db.Model):
     )
 
     user = db.relationship(
-        "User"
+        "User",
+        back_populates="conversation_participations"
     )
 
     __table_args__ = (
