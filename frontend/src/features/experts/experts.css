@@ -1,0 +1,141 @@
+/* ==========================================================================
+   Experts feature — styles
+   ========================================================================== */
+
+.asa-experts__search {
+  position: relative;
+  margin-bottom: var(--space-5);
+}
+
+.asa-experts__search .asa-field {
+  margin-bottom: 0;
+}
+
+.asa-experts__search-input {
+  padding-left: 2.5rem;
+}
+
+.asa-experts__search-icon {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.asa-expert-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.asa-expert-card + .asa-expert-card {
+  margin-top: var(--space-4);
+}
+
+.asa-expert-card__body {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.asa-expert-card__avatar {
+  flex-shrink: 0;
+}
+.asa-expert-card__avatar:hover {
+  text-decoration: none;
+}
+
+.asa-expert-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.asa-expert-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.asa-expert-card__name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.asa-expert-card__username,
+.asa-expert-card__location {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asa-expert-card__bio {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.asa-expert-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---- Expert detail / profile ---- */
+.asa-profile-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.asa-profile-hero__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.asa-profile-hero__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.asa-profile-hero__name {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+.asa-profile-hero__username,
+.asa-profile-hero__location {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  display: block;
+}
+
+.asa-profile-hero__bio {
+  margin: var(--space-2) 0 0;
+}
+
+.asa-profile-hero__stats {
+  display: flex;
+  gap: var(--space-5);
+  font-size: var(--font-size-sm);
+}
+
+.asa-profile-hero__stat {
+  font-weight: var(--font-weight-bold);
+}
+
+@media (min-width: 40rem) {
+  .asa-profile-hero {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+}

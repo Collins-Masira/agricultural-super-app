@@ -2,57 +2,107 @@
 
 ## Purpose
 
-The frontend is the user-facing application for the **Agricultural Super App**. It will present the platform's MVP features to users and provide the experience defined by the official Figma design.
+The frontend is the user-facing application for the **Agricultural Super App**. It presents the MVP features to users following the official Figma design (see `docs/design.md`).
 
-> **Frontend implementation: NOT STARTED.** No application code, dependencies, or technology stack exist yet. Everything below is a plan for when implementation begins.
+## Stack
 
-## Planned Frontend Responsibilities
+| Item | Choice |
+| --- | --- |
+| Build tool | Vite 5 |
+| Framework | React 18 (SPA) |
+| Language | JavaScript (ES modules) |
+| State management | Redux Toolkit (`@reduxjs/toolkit`) + `react-redux` |
+| Routing | React Router v6 |
+| Styling | Plain CSS with design tokens (`src/styles/tokens.css`) — no UI framework |
+| Package manager | npm |
 
-- Present the MVP screens and flows defined by the official Figma design.
-- Let users register, log in, and manage their profiles.
-- Let users browse and publish agricultural posts, comment, and like.
-- Let users discover and follow experts and communities.
-- Let users message experts and communities.
-- Communicate with the backend through its API; never store authoritative data locally.
+The stack was selected at the start of Stage 2 (see `docs/project/roadmap.md`). The frontend is a client-side SPA that consumes the backend API; it does not render server-side.
 
-## Relationship with Backend
+## Getting Started
 
-- The frontend consumes the backend API for all data and business logic.
-- The backend is the single source of truth; the frontend only renders and submits user actions.
-- Both live in the same repository but as separate application folders (`frontend/` and `backend/`).
-- A shared, documented API contract will be agreed when the stack is selected.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Figma Reference
+Commands:
 
-The official UI/UX design (the visual source of truth for the frontend):
+- `npm run dev` — start the Vite dev server (default http://localhost:5173)
+- `npm run build` — build for production
+- `npm run preview` — preview the production build
 
-> https://www.figma.com/make/HqRJlUNybCkDNSuy0TMeQj/Agricultural-Super-App-Development
+## Folder Structure
 
-> **Note:** the Figma could not be verified from the automation environment (HTTP 403). Screens and components must be confirmed by the design owner before implementation. See `docs/design.md`.
+```text
+frontend/
+├── src/
+│   ├── components/ui/        # Reusable UI primitives (Button, Input, Card, Modal, …)
+│   ├── components/icons.jsx  # Inline SVG icons
+│   ├── config/env.js         # Runtime config from environment variables
+│   ├── features/             # Feature modules, each with pages/ and components/
+│   │   ├── auth/             # Login, registration, auth context, protected routes
+│   │   ├── layout/           # App shell: header nav, mobile bottom nav
+│   │   ├── posts/            # Feed, post detail, create post, likes, comments
+│   │   ├── experts/          # Expert discovery, expert profiles, follow/unfollow
+│   │   └── profile/          # Current user profile, edit profile
+│   ├── lib/                  # HTTP client, formatting helpers
+│   ├── services/             # API service layer (auth, posts, experts, profiles)
+│   ├── store/                # Redux store and slices (auth, posts, experts, profile)
+│   ├── styles/               # Design tokens and global styles
+│   └── types/domain.js       # Domain shapes (JSDoc) mirroring docs/schema.dbml
+├── .env.example              # Documented environment variables
+├── index.html
+├── vite.config.js
+└── package.json
+```
 
-## Planned User Experience
+## State Management
 
-- Simple onboarding: registration and login.
-- A content feed of agricultural posts with images.
-- Profiles, including expert profiles with verification badges.
-- Communities with membership and following.
-- Conversations for messaging experts and communities.
-- Clear, consistent patterns for common actions (post, follow, comment, like, message).
+State is managed with Redux Toolkit:
 
-## Responsive / Mobile Direction
+- `src/store/store.js` — the configured Redux store.
+- `src/store/slices/` — slices for auth (session + current user), posts (feed, post detail, user posts, likes, comments), experts (expert discovery, profiles, follow/unfollow), and profile (viewing/editing a profile).
+- `src/store/hooks.js` — typed hooks `useAppDispatch` / `useAppSelector`.
+- The auth layer (`src/features/auth/AuthContext.jsx`) sits on top of the `auth` slice and keeps the same `useAuth()` API the pages rely on (`status`, `user`, `login`, `register`, `logout`, `refreshProfile`).
 
-- Design is mobile-first: most users interact on phones, often on slow or intermittent connections.
-- Layouts must adapt across phones, tablets, and desktops.
-- Media and downloads should stay light for low-bandwidth conditions.
-- Touch targets and text sizes must suit field use.
+Slices call the existing service layer (`src/services`), which routes to the mock API by default and to the real Flask API once the backend contract is confirmed.
+
+## Backend API Integration
+
+The backend is being developed separately. To avoid inventing production APIs, the frontend uses an **isolated mock data layer** by default:
+
+- `src/services/*.js` — service functions (the boundary the UI uses).
+- `src/services/mocks/` — mock implementations, clearly marked as development-only.
+- `VITE_USE_MOCKS=true` (default) routes the services to the mock layer; set it to `false` (and `VITE_API_BASE_URL`) once the backend API contract is confirmed.
+
+Service endpoint paths are conventional placeholders and must be reconciled with the backend team's actual API contract before they are enabled. See `src/services/experts.service.js` and `src/services/posts.service.js` for the expected shapes.
+
+## Design
+
+The Figma file (https://www.figma.com/make/HqRJlUNybCkDNSuy0TMeQj/Agricultural-Super-App-Development) could not be verified from the automation environment (HTTP 403). The current UI uses an accessible, mobile-first baseline derived from `docs/design.md`:
+
+- Design tokens (colour, spacing, type, radii) in `src/styles/tokens.css`.
+- Desktop: top header with horizontal navigation.
+- Mobile: bottom navigation bar.
+- Verification badges, cards, empty/loading/error states per the design documentation.
+
+**Reconcile tokens/components with the verified Figma file when the design is inspected and recorded in `docs/design.md`.**
+
+## Scope
+
+Owned by this frontend: foundation, routing, layout, auth UI, profiles, expert discovery/profiles, posts, likes, comments, follow/unfollow, reusable UI components, loading/empty/error states.
+
+Communities and messaging are owned by a separate frontend developer and are not implemented here.
 
 ## Development Status
 
 | Item | Status |
 | --- | --- |
-| Technology stack | Not selected |
-| Application code | **NOT STARTED** |
-| Screens/UI | None — planned (per Figma) |
+| Technology stack | Selected (React + JS + Redux Toolkit + Vite) |
+| Application code | Foundation + core MVP screens implemented |
+| Mock API layer | Present (development only) |
+| Real API integration | Blocked — backend API contract not yet available |
 | Figma verification | Blocked — not accessible (HTTP 403) |
 | Tests | None — planned |
-| CI for this folder | Planned, added after scaffolding |
+| Frontend CI | Planned — add `frontend-ci.yml` after stack review |
