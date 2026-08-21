@@ -1,0 +1,69 @@
+/* ==========================================================================
+   Authentication pages — styles
+   ========================================================================== */
+
+.asa-auth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.asa-auth__brand {
+  text-align: center;
+}
+
+.asa-auth__brand-link {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.asa-auth__brand-link span {
+  color: var(--color-primary);
+}
+
+.asa-auth__tagline {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asa-auth__card {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.asa-auth__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xl);
+}
+
+.asa-auth__subtitle {
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asa-auth__error {
+  padding: var(--space-3);
+  margin: 0 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.asa-auth__footer {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asa-auth__footer a {
+  font-weight: var(--font-weight-semibold);
+}
