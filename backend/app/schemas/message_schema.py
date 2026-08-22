@@ -1,5 +1,3 @@
-# app/schemas/message_schema.py
-
 from marshmallow import EXCLUDE, fields, validate
 
 from app.extensions import ma
@@ -13,11 +11,6 @@ class ConversationParticipantSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
@@ -42,11 +35,6 @@ class MessageSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
@@ -73,11 +61,6 @@ class ConversationSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)

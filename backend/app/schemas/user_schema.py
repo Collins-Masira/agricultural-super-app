@@ -1,4 +1,3 @@
-# app/schemas/user_schema.py
 
 from marshmallow import EXCLUDE, fields, validate
 
@@ -17,11 +16,7 @@ class UserPublicSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
+        
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
@@ -41,11 +36,6 @@ class UserSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
@@ -60,10 +50,6 @@ class UserSchema(ma.Schema):
         validate=validate.Length(max=255),
     )
 
-    # Accepts the client-supplied plaintext password on load only.
-    # Hashing (User.set_password) happens in the service layer before
-    # persistence -- this field is never populated on dump, so the stored
-    # hash can never leak in a response.
     password_hash = fields.String(
         required=True,
         load_only=True,
