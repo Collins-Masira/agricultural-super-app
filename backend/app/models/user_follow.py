@@ -30,6 +30,18 @@ class UserFollow(db.Model):
         nullable=False
     )
 
+    follower = db.relationship(
+        "User",
+        foreign_keys=[follower_id],
+        back_populates="following"
+    )
+
+    following = db.relationship(
+        "User",
+        foreign_keys=[following_id],
+        back_populates="followers"
+    )
+
     __table_args__ = (
         db.UniqueConstraint(
             "follower_id",

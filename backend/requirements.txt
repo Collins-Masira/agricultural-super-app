@@ -1,5 +1,15 @@
-Flask==3.1.3
+# Agricultural Super App backend dependencies
+# The schema docs have not finalised the DBMS; PostgreSQL is the target
+# (see app/config.py DATABASE_URL). Versions are pinned to known-good
+# combinations for Python 3.11.
+
+Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
-Flask-Migrate==4.1.0
-Flask-Marshmallow==1.5.0
-marshmallow==4.3.1
+Flask-Migrate==4.0.7
+Flask-Marshmallow==1.2.1
+marshmallow==3.21.3
+marshmallow-sqlalchemy==1.1.0
+SQLAlchemy==2.0.31
+Werkzeug==3.0.3
+python-dotenv==1.0.1
+psycopg2-binary==2.9.9

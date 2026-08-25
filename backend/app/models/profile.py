@@ -43,6 +43,11 @@ class Profile(db.Model):
         db.String(30)
     )
 
+    is_verified = db.Column(
+        db.Boolean,
+        default=False
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
