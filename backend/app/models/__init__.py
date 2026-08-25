@@ -8,6 +8,7 @@ from .comment import Comment
 from .like import Like
 from .community import Community
 from .community_member import CommunityMember
+from .community_follow import CommunityFollow
 from .user_follow import UserFollow
 from .conversation import Conversation
 from .conversation_participant import ConversationParticipant

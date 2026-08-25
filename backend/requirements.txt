@@ -3,16 +3,18 @@ Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.1.0
 Flask-Marshmallow==1.5.0
 marshmallow==4.3.1
+marshmallow-sqlalchemy==1.1.0
 
 # JWT auth: standard, minimal, no framework opinions -- issues/verifies
-# access tokens in app/auth/jwt.py. Justification: implementing our own
-# signed-token format on top of itsdangerous would just reinvent a
-# worse, non-standard version of this.
+# access tokens in app/auth/jwt.py.
 PyJWT==2.7.0
 
-# CORS: required for the separate ReactJS/Redux SPA (different origin)
-# to call this API from the browser at all. Justification: hand-rolling
-# CORS headers is a well-known source of subtle security bugs (e.g.
-# reflecting Origin unconditionally); this is the standard, audited
-# solution.
+# CORS: required for the separate ReactJS/Redux SPA to call this API
+# from the browser at all.
 Flask-Cors==6.0.5
+
+# Loads .env for local dev (flask CLI, wsgi.py).
+python-dotenv==1.2.2
+
+# Postgres driver -- required for the default DATABASE_URL to connect.
+psycopg2-binary==2.9.12
