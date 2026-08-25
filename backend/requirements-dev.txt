@@ -1,0 +1,13 @@
+# requirements-dev.txt
+#
+# Install with: pip install -r requirements-dev.txt
+# (pulls in requirements.txt first, then adds test tooling on top)
+#
+# Kept separate from requirements.txt on purpose: pytest and coverage
+# tooling are never needed in production, so production installs
+# shouldn't pull them in.
+
+-r requirements.txt
+
+pytest==9.1.1
+pytest-cov==7.1.0

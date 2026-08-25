@@ -6,6 +6,136 @@ resolving commit/PR reference so history isn't lost.
 
 ---
 
+## Open
+
+### 3. `role` has no database-level enforcement
+
+**Description:** `UserSchema.role` is now restricted to `farmer`/`expert`
+via `validate.OneOf(...)` (added while building auth — see
+`app/schemas/user_schema.py`), which closes the privilege-escalation
+path through the registration API. But the `users.role` column itself is
+still a free-text `varchar(30)` with no `CheckConstraint` or enum type at
+the database level. Any code path that writes to this column outside
+the schema (a future admin script, a bulk import, a bug in a new
+endpoint) is not protected by that validation.
+
+**Impact:** Low today (registration is currently the only write path to
+`role`), but the protection is API-layer-only, not defense-in-depth.
+
+**Recommended solution:** Add `db.CheckConstraint("role IN ('farmer', 'expert', 'admin')", name="valid_role")` (or a native Postgres `ENUM` type) at the model level, via migration.
+
+**Priority:** Medium.
+
+**Target milestone:** Before any second write path to `role` is built (e.g. an admin-promotion endpoint).
+
+### 4. No admin bootstrap mechanism
+
+**Description:** `role == "admin"` is checked throughout the service
+layer as an authorization override, but there is currently no way to
+create an admin account except direct database access
+(`UPDATE users SET role = 'admin' WHERE id = ...`).
+
+**Impact:** Low — expected for MVP — but worth having a deliberate answer
+before this goes anywhere near production.
+
+**Recommended solution:** A CLI command (`flask create-admin`) or a
+one-time seed script, not an HTTP endpoint (an admin-promotion endpoint
+would just recreate the same privilege-escalation risk closed in item 3
+above, one layer up).
+
+**Priority:** Low.
+
+**Target milestone:** Before production deployment.
+
+### 5. JWTs cannot be revoked
+
+**Description:** Access tokens are stateless and signed, verified only
+against `JWT_SECRET_KEY` and their own `exp` claim — there is no
+server-side token store, so there is no way to invalidate a specific
+token before it expires. `is_active` is re-checked on every request
+(see `app/auth/decorators.py`), which handles *account* deactivation,
+but a stolen-but-still-valid token for an active account cannot be
+individually revoked, and there is no logout endpoint (logout is purely
+a client-side "discard the token" action).
+
+**Impact:** Medium — bounded by `JWT_ACCESS_TOKEN_EXPIRES_SECONDS`
+(currently 24h), but a real "log out everywhere" or "I think my token
+leaked" story requires either short-lived tokens + refresh tokens, or a
+server-side blocklist.
+
+**Recommended solution:** Add a refresh-token flow (short-lived access
+token, longer-lived refresh token stored server-side and revocable) when
+the mobile/SPA client needs "stay logged in" behavior beyond 24h.
+
+**Priority:** Medium.
+
+**Target milestone:** Before this ships with real user accounts.
+
+### 6. Production config has no startup validation
+
+**Description:** `ProductionConfig` accepts `SECRET_KEY`/`JWT_SECRET_KEY`
+falling back to the insecure `dev-secret-key-change-me` default if the
+environment variables are simply forgotten at deploy time — there's
+nothing that stops the app from booting in that state.
+
+**Impact:** High *if* it happens (tokens signed with a known default
+secret are forgeable), but requires an operational mistake to trigger.
+
+**Recommended solution:** In `create_app()`, when `config_name ==
+"production"`, assert `SECRET_KEY`/`JWT_SECRET_KEY` are set and don't
+match their dev defaults; raise on startup rather than serving traffic
+insecurely.
+
+**Priority:** Medium — cheap to fix, worth doing before first deploy.
+
+**Target milestone:** Before production deployment.
+
+### 7. `Message.is_read` has no `read_at` timestamp
+
+*(Carried over from the original schema-layer review — still open.)*
+A boolean captures *that* a message was read, not *when*. Fine for an
+unread-count badge; insufficient for "seen 2 hours ago" UI, which the
+messaging feature will likely want eventually.
+
+**Priority:** Low. **Target milestone:** When read receipts UI is built.
+
+### 8. `datetime.utcnow()` is deprecated (Python 3.12+)
+
+**Found during:** Running the test suite — surfaced as a `DeprecationWarning`
+on every single test that touches a timestamped row (370+ warnings in
+the unit suite alone).
+
+**Description:** Every model's `default=datetime.utcnow` (12 models) and
+`message_service.py`'s manual `conversation.updated_at =
+datetime.utcnow()` use naive (non-timezone-aware) datetimes. Python 3.12
+deprecated `datetime.utcnow()` in favor of `datetime.now(timezone.utc)`,
+which is timezone-aware. Notably, `app/auth/jwt.py` already does this
+correctly (`datetime.now(timezone.utc)`) — the models are the
+inconsistent ones.
+
+**Impact:** None today (it still works, just emits a warning). Real risk
+is comparing a naive and an aware datetime somewhere down the line,
+which raises `TypeError` at runtime rather than failing predictably —
+and the warning is currently just noise in the test output, which makes
+it easy to stop noticing a *new*, unrelated deprecation warning once
+this one is expected background noise.
+
+**Recommended solution:** Replace `default=datetime.utcnow` with
+`default=lambda: datetime.now(timezone.utc)` (or equivalent) across all
+12 models and `message_service.py`, consistent with `app/auth/jwt.py`'s
+existing pattern. Requires a migration if columns need to change from
+`TIMESTAMP` to `TIMESTAMP WITH TIME ZONE` to actually store the tzinfo
+rather than silently dropping it.
+
+**Priority:** Low — cosmetic today, but cheap to fix and gets more
+annoying to retrofit the longer timestamped data accumulates.
+
+**Target milestone:** Next time any model file is touched for an
+unrelated change; not urgent enough to justify a dedicated pass across
+12 files on its own.
+
+---
+
 ## Resolved
 
 ### R1. Inconsistent `nullable` on timestamp columns — RESOLVED 2026-08-20

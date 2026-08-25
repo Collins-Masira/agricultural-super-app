@@ -1,3 +1,4 @@
+# app/schemas/__init__.py
 
 from .user_schema import UserSchema, UserPublicSchema
 from .profile_schema import ProfileSchema
@@ -10,6 +11,7 @@ from .message_schema import (
     MessageSchema,
 )
 
+# Single-object / collection instances, ready to import and use in routes.
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
