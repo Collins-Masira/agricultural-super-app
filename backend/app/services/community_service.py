@@ -2,7 +2,7 @@
 
 from app.errors import ConflictError, ForbiddenError, NotFoundError
 from app.extensions import db
-from app.models import Community, CommunityMember
+from app.models import Community, CommunityFollow, CommunityMember
 
 MAX_PAGE_SIZE = 100
 
@@ -19,15 +19,37 @@ def get_community_or_404(community_id):
     return community
 
 
-def list_communities(page=1, per_page=20):
+def _annotate_follow_status(communities, current_user):
+    """Set is_following on each community for the given user."""
+    if current_user is None:
+        for c in communities:
+            c.is_following = False
+        return
+    if not communities:
+        return
+    community_ids = [c.id for c in communities]
+    followed_ids = {
+        row.community_id
+        for row in db.session.query(CommunityFollow.community_id).filter(
+            CommunityFollow.user_id == current_user.id,
+            CommunityFollow.community_id.in_(community_ids),
+        ).all()
+    }
+    for c in communities:
+        c.is_following = c.id in followed_ids
+
+
+def list_communities(page=1, per_page=20, current_user=None):
     per_page = min(per_page, MAX_PAGE_SIZE)
-    return (
+    communities = (
         db.session.query(Community)
         .order_by(Community.created_at.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
         .all()
     )
+    _annotate_follow_status(communities, current_user)
+    return communities
 
 
 def create_community(current_user, data):
@@ -98,4 +120,36 @@ def leave_community(current_user, community_id):
         raise NotFoundError("You are not a member of this community.")
 
     db.session.delete(membership)
+    db.session.commit()
+
+
+def follow_community(current_user, community_id):
+    community = get_community_or_404(community_id)
+
+    existing = (
+        db.session.query(CommunityFollow)
+        .filter_by(user_id=current_user.id, community_id=community.id)
+        .first()
+    )
+    if existing:
+        raise ConflictError("You are already following this community.")
+
+    follow = CommunityFollow(user_id=current_user.id, community_id=community.id)
+    db.session.add(follow)
+    db.session.commit()
+    return follow
+
+
+def unfollow_community(current_user, community_id):
+    community = get_community_or_404(community_id)
+
+    follow = (
+        db.session.query(CommunityFollow)
+        .filter_by(user_id=current_user.id, community_id=community_id)
+        .first()
+    )
+    if follow is None:
+        raise NotFoundError("You are not following this community.")
+
+    db.session.delete(follow)
     db.session.commit()

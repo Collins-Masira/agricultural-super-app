@@ -4,7 +4,7 @@ import { Avatar, Button, EmptyState, ErrorState, LoadingState } from '@/componen
 import { VerifiedBadge } from '@/components/ui'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { fetchCommunity, toggleMembership } from '@/store/slices/communitiesSlice'
+import { fetchCommunity, toggleCommunityFollow, toggleMembership } from '@/store/slices/communitiesSlice'
 import '../communities.css'
 
 export function CommunityDetailPage() {
@@ -17,6 +17,7 @@ export function CommunityDetailPage() {
   const status = useAppSelector((state) => state.communities.currentStatus)
   const error = useAppSelector((state) => state.communities.currentError)
   const loading = useAppSelector((state) => state.communities.membershipLoadingId === Number(communityId))
+  const followLoading = useAppSelector((state) => state.communities.followLoadingId === Number(communityId))
 
   useEffect(() => {
     if (communityId) dispatch(fetchCommunity(Number(communityId)))
@@ -29,10 +30,16 @@ export function CommunityDetailPage() {
 
   const isMember = community.members.some((m) => m.userId === user?.user.id)
   const isCreator = community.createdBy === user?.user.id
+  const isFollowing = community.isFollowing ?? false
 
   function handleToggle() {
     if (loading) return
     dispatch(toggleMembership({ communityId: community.id, userId: user.user.id }))
+  }
+
+  function handleFollowToggle() {
+    if (followLoading) return
+    dispatch(toggleCommunityFollow({ communityId: community.id, userId: user.user.id }))
   }
 
   return (
@@ -52,9 +59,18 @@ export function CommunityDetailPage() {
             </p>
           </div>
           {!isCreator && (
-            <Button variant={isMember ? 'secondary' : 'primary'} onClick={handleToggle} loading={loading} aria-pressed={isMember}>
-              {isMember ? 'Leave community' : 'Join community'}
-            </Button>
+            <div className="asa-community-hero__actions">
+              <Button
+                variant={isFollowing ? 'secondary' : 'ghost'}
+                onClick={handleFollowToggle}
+                loading={followLoading}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </Button>
+              <Button variant={isMember ? 'secondary' : 'primary'} onClick={handleToggle} loading={loading} aria-pressed={isMember}>
+                {isMember ? 'Leave community' : 'Join community'}
+              </Button>
+            </div>
           )}
         </div>
         {community.description && <p>{community.description}</p>}

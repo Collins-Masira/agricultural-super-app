@@ -4,7 +4,7 @@
  * a one-line change in each service.
  */
 
-import { comments, currentUserId, db, likes, posts, users } from './mockDb'
+import { comments, communities as seedCommunities, communityFollows as seedCommunityFollows, conversations as seedConversations, currentUserId, db, likes, messages as seedMessages, posts, users } from './mockDb'
 
 const LATENCY_MS = 350
 
@@ -257,5 +257,148 @@ export const mockExperts = {
 export const mockSession = {
   async me(userId) {
     return mockProfiles.getProfile(userId)
+  },
+}
+
+export const mockCommunities = {
+  async listCommunities() {
+    return delay(seedCommunities.map((c) => ({
+      ...c,
+      memberCount: c.members.length,
+    })))
+  },
+
+  async getCommunity(communityId) {
+    const community = seedCommunities.find((c) => c.id === communityId)
+    if (!community) fail('Community not found.', 404)
+    return delay({ ...community, memberCount: community.members.length })
+  },
+
+  async createCommunity(input) {
+    if (!input.name?.trim()) fail('Community name is required.')
+    const id = Math.max(...seedCommunities.map((c) => c.id), 0) + 1
+    const community = {
+      id,
+      name: input.name.trim(),
+      description: input.description ?? null,
+      imageUrl: input.imageUrl ?? null,
+      createdBy: currentUserId,
+      members: [{ id, userId: currentUserId, communityId: id, joinedAt: new Date().toISOString() }],
+      isMember: true,
+      isFollowing: true,
+      memberCount: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    seedCommunities.push(community)
+    return delay(community)
+  },
+
+  async toggleMembership(communityId) {
+    const community = seedCommunities.find((c) => c.id === communityId)
+    if (!community) fail('Community not found.', 404)
+    const idx = community.members.findIndex((m) => m.userId === currentUserId)
+    if (idx >= 0) {
+      community.members.splice(idx, 1)
+    } else {
+      community.members.push({ id: Date.now(), userId: currentUserId, communityId, joinedAt: new Date().toISOString() })
+    }
+    return delay({
+      isMember: idx < 0,
+      memberCount: community.members.length,
+    })
+  },
+
+  async toggleCommunityFollow(communityId) {
+    const existing = seedCommunityFollows.findIndex(
+      (f) => f.userId === currentUserId && f.communityId === communityId
+    )
+    if (existing >= 0) {
+      seedCommunityFollows.splice(existing, 1)
+    } else {
+      seedCommunityFollows.push({ userId: currentUserId, communityId })
+    }
+    return delay({ isFollowing: existing < 0 })
+  },
+}
+
+export const mockMessaging = {
+  async listConversations() {
+    const convs = seedConversations.filter((c) =>
+      c.participants.some((p) => p.userId === currentUserId)
+    )
+    return delay(convs.map((c) => {
+      const allMsgs = seedMessages.filter((m) => m.conversationId === c.id)
+      const lastMsg = allMsgs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+      return {
+        ...c,
+        lastMessage: lastMsg ? {
+          ...lastMsg,
+          sender: toProfile(users.find((u) => u.id === lastMsg.senderId)),
+        } : null,
+        participants: c.participants.map((p) => ({
+          ...p,
+          participant: toProfile(users.find((u) => u.id === p.userId)),
+        })),
+      }
+    }))
+  },
+
+  async createConversation(input) {
+    const targetUserId = input.participantId
+    if (!targetUserId) fail('participant_id is required.')
+    if (targetUserId === currentUserId) fail('Cannot create conversation with yourself.', 400)
+
+    const existing = seedConversations.find((c) =>
+      c.communityId === null &&
+      c.createdBy === currentUserId &&
+      c.participants.some((p) => p.userId === targetUserId)
+    )
+    if (existing) {
+      return delay(existing)
+    }
+
+    const id = Math.max(...seedConversations.map((c) => c.id), 0) + 1
+    const conv = {
+      id,
+      communityId: null,
+      createdBy: currentUserId,
+      participants: [
+        { id: Date.now(), conversationId: id, userId: currentUserId, joinedAt: new Date().toISOString() },
+        { id: Date.now() + 1, conversationId: id, userId: targetUserId, joinedAt: new Date().toISOString() },
+      ],
+      lastMessage: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    seedConversations.push(conv)
+    return delay(conv)
+  },
+
+  async listMessages(conversationId) {
+    return delay(
+      seedMessages
+        .filter((m) => m.conversationId === conversationId)
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((m) => ({
+          ...m,
+          sender: toProfile(users.find((u) => u.id === m.senderId)),
+        }))
+    )
+  },
+
+  async sendMessage(conversationId, content) {
+    if (!content.trim()) fail('Message content is required.')
+    const msg = {
+      id: Math.max(...seedMessages.map((m) => m.id), 0) + 1,
+      conversationId,
+      senderId: currentUserId,
+      sender: toProfile(users.find((u) => u.id === currentUserId)),
+      content: content.trim(),
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    }
+    seedMessages.push(msg)
+    return delay(msg)
   },
 }

@@ -17,6 +17,7 @@ import adminReducer from './slices/adminSlice'
  * - experts     — expert discovery, expert profile, follows
  * - communities — community discovery, membership
  * - messages    — conversations and messages
+ * - admin       — admin dashboard data
  *
  * The slices call the service layer (src/services), which routes to the
  * in-repo mock data layer when VITE_USE_MOCKS=true, and to the real Flask

@@ -114,6 +114,7 @@ export function normalizeCommunity(c) {
     updatedAt: c.updated_at,
     creator: toUserProfile(c.creator),
     members: (c.members ?? []).map(normalizeMembership),
+    isFollowing: c.is_following ?? false,
   }
 }
 

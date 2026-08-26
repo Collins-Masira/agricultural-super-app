@@ -65,9 +65,9 @@ frontend/
 State is managed with Redux Toolkit:
 
 - `src/store/store.js` — the configured Redux store.
-- `src/store/slices/` — slices for auth (session + current user), posts (feed, post detail, user posts, likes, comments), experts (expert discovery, profiles, follow/unfollow), and profile (viewing/editing a profile).
+- `src/store/slices/` — slices for auth, posts, experts, profile, communities, and messaging.
 - `src/store/hooks.js` — typed hooks `useAppDispatch` / `useAppSelector`.
-- The auth layer (`src/features/auth/AuthContext.jsx`) sits on top of the `auth` slice and keeps the same `useAuth()` API the pages rely on (`status`, `user`, `login`, `register`, `logout`, `refreshProfile`).
+- The auth layer (`src/features/auth/AuthContext.jsx`) sits on top of the `auth` slice and keeps the same `useAuth()` API the pages rely on.
 
 Slices call the service layer (`src/services`), which talks to the real Flask API by default.
 
@@ -88,8 +88,6 @@ The Figma file (https://www.figma.com/make/HqRJlUNybCkDNSuy0TMeQj/Agricultural-S
 - Desktop: top header with horizontal navigation.
 - Mobile: bottom navigation bar.
 - Verification badges, cards, empty/loading/error states per the design documentation.
-
-**Reconcile tokens/components with the verified Figma file when the design is inspected and recorded in `docs/design.md`.**
 
 ## Scope
 

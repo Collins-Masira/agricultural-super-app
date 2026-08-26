@@ -56,6 +56,9 @@ def create_app(config_name=None):
 
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
+    # Importing the models package registers every model on db.metadata.
+    from app import models  # noqa: F401,E402
+
     register_error_handlers(app)
     register_blueprints(app)
 

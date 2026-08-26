@@ -56,7 +56,7 @@ Quick summary — all routes are under `/api`, except `/health`:
 | Users | `GET /api/users/<id>`, `PUT /api/users/me/profile`, `POST\|DELETE /api/users/<id>/follow` |
 | Posts | `GET\|POST /api/posts`, `GET\|PUT\|DELETE /api/posts/<id>`, `POST /api/posts/<id>/images`, `DELETE /api/posts/<id>/images/<id>`, `GET\|POST /api/posts/<id>/comments`, `POST\|DELETE /api/posts/<id>/like` |
 | Comments | `PUT\|DELETE /api/comments/<id>` |
-| Communities | `GET\|POST /api/communities`, `GET\|PUT\|DELETE /api/communities/<id>`, `POST\|DELETE /api/communities/<id>/members` |
+| Communities | `GET\|POST /api/communities`, `GET\|PUT\|DELETE /api/communities/<id>`, `POST\|DELETE /api/communities/<id>/members`, `POST\|DELETE /api/communities/<id>/follow` |
 | Messaging | `GET\|POST /api/conversations`, `GET /api/conversations/<id>`, `GET\|POST /api/conversations/<id>/messages`, `PATCH /api/messages/<id>/read` |
 | Uploads | `POST /api/uploads` (multipart image upload), `GET /api/uploads/<filename>` |
 | Admin (requires `role=admin`) | `GET /api/admin/stats`, `GET /api/admin/users`, `GET /api/admin/users/<id>`, `PATCH /api/admin/users/<id>` |
@@ -126,6 +126,14 @@ Tests run against in-memory SQLite by default (see `TestingConfig` in
   duplicating setup code across test files.
 
 A coverage report is written to `htmlcov/index.html` after each run.
+
+## Business Rules
+
+1. **Messaging permission**: A user may only initiate a conversation with a user they follow (`user_follows`) or a community they follow (`community_follows`). Enforced at the application layer.
+2. **Self-follow prevention**: Users cannot follow themselves. Enforced via database `CHECK` constraint and application layer.
+3. **Role validation**: Allowed role values are `farmer`, `expert`, `admin` (per `docs/database.md`). Enforced at the application layer.
+4. **Foreign-key relationships**: All FK relationships are properly enforced at the database level with `ON DELETE CASCADE` or `RESTRICT` as specified in the DBML schema.
+5. **Unique constraints**: Duplicate follows, community memberships, and conversation participants are prevented by database unique constraints.
 
 ## Database Responsibility
 

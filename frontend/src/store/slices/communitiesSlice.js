@@ -11,6 +11,7 @@ const initialState = {
   createStatus: 'idle',
   createError: null,
   membershipLoadingId: null,
+  followLoadingId: null,
 }
 
 export const fetchCommunities = createAsyncThunk(
@@ -95,6 +96,28 @@ function applyMembershipChange(community, { userId, wasMember, me }) {
   }
 }
 
+export const toggleCommunityFollow = createAsyncThunk(
+  'communities/toggleCommunityFollow',
+  async ({ communityId, userId }, { getState, rejectWithValue }) => {
+    const state = getState().communities
+    const community =
+      (state.current?.id === communityId ? state.current : null) ??
+      state.list.find((c) => c.id === communityId)
+    const wasFollowing = community?.isFollowing ?? false
+
+    try {
+      if (wasFollowing) {
+        await communitiesService.unfollowCommunity(communityId)
+      } else {
+        await communitiesService.followCommunity(communityId)
+      }
+      return { communityId, wasFollowing }
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to update follow status.')
+    }
+  },
+)
+
 const communitiesSlice = createSlice({
   name: 'communities',
   initialState,
@@ -150,6 +173,23 @@ const communitiesSlice = createSlice({
       })
       .addCase(toggleMembership.rejected, (state) => {
         state.membershipLoadingId = null
+      })
+      .addCase(toggleCommunityFollow.pending, (state, action) => {
+        state.followLoadingId = action.meta.arg.communityId
+      })
+      .addCase(toggleCommunityFollow.fulfilled, (state, action) => {
+        const { communityId, wasFollowing } = action.payload
+        const applyFollow = (community) => {
+          if (community && community.id === communityId) {
+            community.isFollowing = !wasFollowing
+          }
+        }
+        applyFollow(state.current)
+        state.list.forEach(applyFollow)
+        state.followLoadingId = null
+      })
+      .addCase(toggleCommunityFollow.rejected, (state) => {
+        state.followLoadingId = null
       })
   },
 })
