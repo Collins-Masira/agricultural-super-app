@@ -6,13 +6,16 @@ import { fetchUserPosts } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { PostCard } from '@/features/posts/components/PostCard'
 import { ProfileHero } from '@/features/profile/components/ProfileHero'
+import { useAuth } from '@/features/auth/AuthContext'
 import { FollowButton } from '../components/FollowButton'
+import { MessageButton } from '../components/MessageButton'
 import '@/features/experts/experts.css'
 
 export function ExpertProfilePage() {
   const { userId } = useParams()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { user } = useAuth()
 
   const expert = useAppSelector((state) => state.experts.expert)
   const status = useAppSelector((state) => state.experts.expertStatus)
@@ -39,10 +42,15 @@ export function ExpertProfilePage() {
         profile={expert}
         followersCount={followersCount}
         actions={
-          <FollowButton
-            userId={expert.user.id}
-            isFollowing={followingIds.includes(expert.user.id)}
-          />
+          expert.user.id === user?.user.id ? null : (
+            <>
+              <FollowButton
+                userId={expert.user.id}
+                isFollowing={followingIds.includes(expert.user.id)}
+              />
+              <MessageButton userId={expert.user.id} variant="secondary" size="md" />
+            </>
+          )
         }
       />
 

@@ -76,6 +76,23 @@ class TestListPosts:
         assert set(p.id for p in page_one).isdisjoint(p.id for p in page_two)
 
 
+class TestListPostsByUser:
+    def test_returns_only_that_users_posts_newest_first(self, create_user):
+        amina = create_user(username="amina")
+        brian = create_user(username="brian")
+        post_service.create_post(brian, {"title": "Brian's", "content": "c"})
+        first = post_service.create_post(amina, {"title": "First", "content": "c"})
+        second = post_service.create_post(amina, {"title": "Second", "content": "c"})
+
+        posts = post_service.list_posts_by_user(amina.id)
+
+        assert [p.id for p in posts] == [second.id, first.id]
+
+    def test_empty_for_user_with_no_posts(self, create_user):
+        amina = create_user(username="amina")
+        assert post_service.list_posts_by_user(amina.id) == []
+
+
 class TestUpdatePost:
     def test_owner_can_update(self, create_user):
         amina = create_user(username="amina")

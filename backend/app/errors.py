@@ -17,6 +17,7 @@ class ApiError(Exception):
     """
 
     status_code = 400
+    code = None
 
     def __init__(self, message, status_code=None, payload=None):
         super().__init__(message)
@@ -29,6 +30,8 @@ class ApiError(Exception):
         body = {"error": self.message}
         if self.payload:
             body["details"] = self.payload
+        if self.code:
+            body["code"] = self.code
         return body
 
 
@@ -39,9 +42,33 @@ class ValidationAPIError(ApiError):
 
 
 class UnauthorizedError(ApiError):
-    """Missing, invalid, or expired credentials. HTTP 401."""
+    """
+    Missing, invalid, or expired credentials. HTTP 401.
+
+    Also used for authenticated-but-wrong domain checks (e.g. login with
+    the wrong password, change-password with the wrong current password)
+    where the requester's own session token, if any, is completely valid
+    -- only the submitted credential was wrong. See InvalidTokenError for
+    the narrower "your session itself is dead" case.
+    """
 
     status_code = 401
+
+
+class InvalidTokenError(UnauthorizedError):
+    """
+    The Authorization header/token itself is missing, malformed, expired,
+    or no longer valid (e.g. the account was deactivated). HTTP 401.
+
+    Distinguished from UnauthorizedError by `code = "invalid_token"` so
+    the frontend can tell "your session is dead, log in again" apart from
+    an ordinary wrong-password-style 401 on an otherwise-valid session --
+    see jwt_required in app/auth/decorators.py, the only place this is
+    raised, and http.js's 401 handler on the frontend, the only place
+    that reads `code`.
+    """
+
+    code = "invalid_token"
 
 
 class ForbiddenError(ApiError):
@@ -76,18 +103,10 @@ def register_error_handlers(app):
 
     @app.errorhandler(ValidationError)
     def handle_marshmallow_error(err):
-        # Covers schema.load() calls made directly in a route without an
-        # intermediate try/except -- normalized to the same envelope as
-        # ValidationAPIError.
         return jsonify({"error": "Validation failed.", "details": err.messages}), 422
 
     @app.errorhandler(IntegrityError)
     def handle_integrity_error(err):
-        # Last line of defense against races that slip past service-level
-        # pre-checks (e.g. two requests registering the same username at
-        # the same instant). The session MUST be rolled back here, or
-        # every subsequent query in this request/thread would raise
-        # "PendingRollbackError" instead of the real problem.
         db.session.rollback()
         return (
             jsonify({"error": "A record with conflicting unique data already exists."}),
@@ -101,6 +120,10 @@ def register_error_handlers(app):
     @app.errorhandler(405)
     def handle_405(err):
         return jsonify({"error": "Method not allowed on this endpoint."}), 405
+
+    @app.errorhandler(413)
+    def handle_413(err):
+        return jsonify({"error": "The uploaded file is too large."}), 413
 
     @app.errorhandler(500)
     def handle_500(err):

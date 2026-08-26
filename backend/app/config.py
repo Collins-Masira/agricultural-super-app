@@ -1,6 +1,7 @@
 # app/config.py
 
 import os
+import tempfile
 
 
 class Config:
@@ -19,16 +20,12 @@ class Config:
         "postgresql://postgres:postgres@localhost:5432/agri_super_app",
     )
 
-    # Falls back to SECRET_KEY only for local-dev convenience; production
-    # should always set JWT_SECRET_KEY explicitly and independently, so a
-    # leak of one secret doesn't compromise both signing schemes.
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
     JWT_ALGORITHM = "HS256"
     JWT_ACCESS_TOKEN_EXPIRES_SECONDS = int(
         os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_SECONDS", 60 * 60 * 24)  # 24h
     )
 
-    # Comma-separated list of allowed browser origins for the SPA.
     CORS_ORIGINS = [
         origin.strip()
         for origin in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -36,6 +33,28 @@ class Config:
     ]
 
     JSON_SORT_KEYS = False
+
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+    PASSWORD_RESET_TOKEN_EXPIRES_SECONDS = int(
+        os.environ.get("PASSWORD_RESET_TOKEN_EXPIRES_SECONDS", 60 * 60)  # 1h
+    )
+    AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama")
+    AI_MODEL = os.environ.get("AI_MODEL")
+
+    OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 5 * 1024 * 1024))  # 5MB
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").strip().lower() in ("true", "1", "yes")
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").strip().lower() in ("true", "1", "yes")
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    # Falls back to MAIL_USERNAME (the common case: sending account IS
+    # the "from" address) so this doesn't have to be set twice.
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
 
 
 class DevelopmentConfig(Config):
@@ -55,14 +74,12 @@ class TestingConfig(Config):
         "TEST_DATABASE_URL", "sqlite:///:memory:"
     )
     JWT_ACCESS_TOKEN_EXPIRES_SECONDS = 3600
-
-    # Flask defaults PROPAGATE_EXCEPTIONS to True whenever TESTING=True,
-    # which makes unhandled exceptions bubble up raw to the test client
-    # instead of going through our registered error handlers. That's the
-    # opposite of what we want: the whole point of testing error
-    # handling is to confirm the handler produces the same JSON envelope
-    # in tests as it would in production. Explicitly disabling this
-    # keeps test behavior representative of real request handling.
+    UPLOAD_FOLDER = tempfile.mkdtemp(prefix="agri_super_app_test_uploads_")
+    MAIL_SERVER = "smtp.test.example.com"
+    MAIL_USERNAME = "test@example.com"
+    MAIL_PASSWORD = "test-password"
+    MAIL_DEFAULT_SENDER = "test@example.com"
+    MAIL_SUPPRESS_SEND = True
     PROPAGATE_EXCEPTIONS = False
 
 

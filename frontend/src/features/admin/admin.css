@@ -1,0 +1,322 @@
+/* ==========================================================================
+   Admin — distinct visual identity: dark control-center sidebar vs. the
+   light, card-based normal app shell.
+   ========================================================================== */
+
+.asa-admin {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.asa-admin__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background-color: #16241a;
+  color: #e8ede9;
+}
+
+.asa-admin__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: #fff;
+  text-decoration: none;
+}
+
+.asa-admin__brand span:first-of-type {
+  color: #7fd99a;
+}
+
+.asa-admin__brand-badge {
+  margin-left: auto;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: #2f6b3a;
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.asa-admin__nav {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.asa-admin__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: #b9c4bb;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.asa-admin__link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-decoration: none;
+}
+
+.asa-admin__link--active {
+  background-color: #2f6b3a;
+  color: #fff;
+}
+
+.asa-admin__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.asa-admin__profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.asa-admin__profile-info {
+  display: none;
+}
+
+.asa-admin__profile-name {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #fff;
+}
+
+.asa-admin__profile-role {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-size-xs);
+  color: #9fb0a2;
+}
+
+.asa-admin__logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: #b9c4bb;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.asa-admin__logout:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.asa-admin__main {
+  flex: 1;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+  max-width: 72rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 40rem) {
+  .asa-admin {
+    flex-direction: row;
+  }
+
+  .asa-admin__sidebar {
+    flex-direction: column;
+    align-items: stretch;
+    width: 15rem;
+    flex-shrink: 0;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+
+  .asa-admin__nav {
+    flex-direction: column;
+  }
+
+  .asa-admin__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    margin-left: 0;
+    margin-top: auto;
+  }
+
+  .asa-admin__profile {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-left: 0;
+    padding-top: var(--space-3);
+  }
+
+  .asa-admin__profile-info {
+    display: block;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .asa-admin__main {
+    padding: var(--space-6) var(--space-6) var(--space-7);
+  }
+}
+
+/* ---- Dashboard ---- */
+.asa-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 40rem) {
+  .asa-admin-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.asa-admin-stat-card {
+  padding: var(--space-4);
+}
+
+.asa-admin-stat-card__label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.asa-admin-stat-card__value {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.asa-admin-stat-card__meta {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.asa-admin-section {
+  margin-bottom: var(--space-6);
+}
+
+.asa-admin-section__title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-lg);
+}
+
+.asa-admin-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.asa-admin-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asa-admin-list-row:last-child {
+  border-bottom: 0;
+}
+
+.asa-admin-list-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.asa-admin-list-row__title {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.asa-admin-list-row__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- Users table ---- */
+.asa-admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.asa-admin-toolbar .asa-field {
+  margin-bottom: 0;
+}
+
+.asa-admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.asa-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.asa-admin-table th,
+.asa-admin-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.asa-admin-table th {
+  background-color: var(--color-surface-muted);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.asa-admin-table tr:not(:last-child) td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asa-admin-table__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.asa-admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

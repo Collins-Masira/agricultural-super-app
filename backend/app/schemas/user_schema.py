@@ -3,6 +3,7 @@
 from marshmallow import EXCLUDE, fields, validate
 
 from app.extensions import ma
+from app.validators import marshmallow_password_validator
 
 
 class UserPublicSchema(ma.Schema):
@@ -70,7 +71,7 @@ class UserSchema(ma.Schema):
         required=True,
         load_only=True,
         data_key="password",
-        validate=validate.Length(min=8),
+        validate=marshmallow_password_validator,
     )
 
     # SECURITY: deliberately restricted to self-service-safe values.

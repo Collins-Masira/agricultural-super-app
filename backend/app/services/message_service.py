@@ -63,7 +63,7 @@ def start_conversation(current_user, participant_ids):
     if missing:
         raise ValidationAPIError(f"Unknown user id(s): {sorted(missing)}")
 
-    conversation = Conversation()
+    conversation = Conversation(created_by=current_user.id)
     db.session.add(conversation)
     db.session.flush()  # assigns conversation.id before participant rows
 

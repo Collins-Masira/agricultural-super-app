@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, PasswordInput, PasswordRequirements } from '@/components/ui'
 import { useAuth, errorMessage } from '@/features/auth/AuthContext'
+import { isPasswordStrong } from '@/lib/passwordPolicy'
 import { AuthLayout } from './AuthLayout'
 import './auth.css'
 
@@ -15,9 +16,11 @@ export function RegisterPage() {
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
   })
+  const [passwordTouched, setPasswordTouched] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -34,13 +37,15 @@ export function RegisterPage() {
     if (!form.email.trim()) errors.email = 'Email is required.'
     else if (!EMAIL_PATTERN.test(form.email.trim())) errors.email = 'Enter a valid email address.'
     if (!form.password) errors.password = 'Password is required.'
-    else if (form.password.length < 6) errors.password = 'Password must be at least 6 characters.'
+    else if (!isPasswordStrong(form.password)) errors.password = 'Password does not meet all requirements below.'
+    if (form.confirmPassword !== form.password) errors.confirmPassword = 'Passwords do not match.'
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
+    setPasswordTouched(true)
     if (!validate() || submitting) return
     setSubmitting(true)
     setFormError(null)
@@ -90,15 +95,23 @@ export function RegisterPage() {
           error={fieldErrors.email}
           placeholder="you@example.com"
         />
-        <Input
+        <PasswordInput
           label="Password"
           name="password"
-          type="password"
           autoComplete="new-password"
           value={form.password}
           onChange={(e) => setField('password', e.target.value)}
+          onFocus={() => setPasswordTouched(true)}
           error={fieldErrors.password}
-          hint="At least 6 characters."
+        />
+        {(passwordTouched || form.password) && <PasswordRequirements password={form.password} />}
+        <PasswordInput
+          label="Confirm password"
+          name="confirmPassword"
+          autoComplete="new-password"
+          value={form.confirmPassword}
+          onChange={(e) => setField('confirmPassword', e.target.value)}
+          error={fieldErrors.confirmPassword}
         />
         <Input
           label="First name"
@@ -121,7 +134,7 @@ export function RegisterPage() {
             {formError}
           </p>
         )}
-        <Button type="submit" block loading={submitting}>
+        <Button type="submit" block loading={submitting} disabled={submitting || !isPasswordStrong(form.password)}>
           Create account
         </Button>
       </form>

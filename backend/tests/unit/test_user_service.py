@@ -87,3 +87,59 @@ class TestUnfollowUser:
         brian = create_user(username="brian")
         with pytest.raises(NotFoundError):
             user_service.unfollow_user(amina, brian.id)
+
+
+class TestListUsers:
+    def test_filters_by_role(self, create_user):
+        create_user(username="farmerx", role="farmer")
+        create_user(username="expertx", role="expert")
+
+        results = user_service.list_users(role="expert")
+
+        assert [u.username for u in results] == ["expertx"]
+
+    def test_no_filters_returns_everyone(self, create_user):
+        create_user(username="amina")
+        create_user(username="brian")
+
+        results = user_service.list_users()
+
+        assert {u.username for u in results} == {"amina", "brian"}
+
+    def test_search_matches_username_case_insensitively(self, create_user):
+        create_user(username="Amina")
+        create_user(username="brian")
+
+        results = user_service.list_users(search="amin")
+
+        assert [u.username for u in results] == ["Amina"]
+
+
+class TestListFollowingIds:
+    def test_returns_ids_of_followed_users(self, create_user):
+        amina = create_user(username="amina")
+        brian = create_user(username="brian")
+        user_service.follow_user(amina, brian.id)
+
+        assert user_service.list_following_ids(amina) == [brian.id]
+
+    def test_empty_when_following_no_one(self, create_user):
+        amina = create_user(username="amina")
+        assert user_service.list_following_ids(amina) == []
+
+
+class TestCountFollowers:
+    def test_counts_followers(self, create_user):
+        amina = create_user(username="amina")
+        brian = create_user(username="brian")
+        user_service.follow_user(brian, amina.id)
+
+        assert user_service.count_followers(amina.id) == 1
+
+    def test_zero_for_unfollowed_user(self, create_user):
+        amina = create_user(username="amina")
+        assert user_service.count_followers(amina.id) == 0
+
+    def test_raises_not_found_for_missing_user(self):
+        with pytest.raises(NotFoundError):
+            user_service.count_followers(999999)

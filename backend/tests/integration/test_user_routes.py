@@ -60,3 +60,92 @@ class TestFollow:
     def test_unfollowing_without_following_returns_404(self, client, amina, brian):
         response = client.delete(f"/api/users/{brian['user']['id']}/follow", headers=amina["headers"])
         assert response.status_code == 404
+
+
+class TestListUsers:
+    def test_lists_all_users_by_default(self, client, amina, brian):
+        response = client.get("/api/users")
+        assert response.status_code == 200
+        usernames = {u["username"] for u in response.get_json()}
+        assert {"amina", "brian"} <= usernames
+
+    def test_filters_by_role(self, client, register_user):
+        register_user(username="farmerx", role="farmer")
+        register_user(username="expertx", role="expert")
+
+        response = client.get("/api/users?role=expert")
+        usernames = {u["username"] for u in response.get_json()}
+        assert "expertx" in usernames
+        assert "farmerx" not in usernames
+
+    def test_search_matches_username(self, client, amina, brian):
+        response = client.get("/api/users?search=ami")
+        usernames = {u["username"] for u in response.get_json()}
+        assert "amina" in usernames
+        assert "brian" not in usernames
+
+    def test_search_matches_profile_first_name(self, client, amina):
+        client.put("/api/users/me/profile", headers=amina["headers"], json={"first_name": "Zawadi"})
+        response = client.get("/api/users?search=Zawadi")
+        usernames = {u["username"] for u in response.get_json()}
+        assert "amina" in usernames
+
+    def test_does_not_require_auth(self, client):
+        response = client.get("/api/users")
+        assert response.status_code == 200
+
+
+class TestUserPosts:
+    def test_lists_only_that_users_posts_newest_first(self, client, amina, brian):
+        client.post("/api/posts", headers=amina["headers"], json={"title": "Amina 1", "content": "c"})
+        client.post("/api/posts", headers=brian["headers"], json={"title": "Brian 1", "content": "c"})
+        client.post("/api/posts", headers=amina["headers"], json={"title": "Amina 2", "content": "c"})
+
+        response = client.get(f"/api/users/{amina['user']['id']}/posts")
+        assert response.status_code == 200
+        titles = [p["title"] for p in response.get_json()]
+        assert titles == ["Amina 2", "Amina 1"]
+
+    def test_unknown_user_returns_404(self, client):
+        response = client.get("/api/users/999999/posts")
+        assert response.status_code == 404
+
+    def test_does_not_require_auth(self, client, amina):
+        response = client.get(f"/api/users/{amina['user']['id']}/posts")
+        assert response.status_code == 200
+
+    def test_liked_by_me_reflects_authenticated_viewer(self, client, amina, brian):
+        post_id = client.post(
+            "/api/posts", headers=amina["headers"], json={"title": "T", "content": "c"}
+        ).get_json()["id"]
+        client.post(f"/api/posts/{post_id}/like", headers=brian["headers"])
+
+        response = client.get(f"/api/users/{amina['user']['id']}/posts", headers=brian["headers"])
+        post = response.get_json()[0]
+        assert post["liked_by_me"] is True
+        assert post["like_count"] == 1
+
+        anonymous_response = client.get(f"/api/users/{amina['user']['id']}/posts")
+        assert anonymous_response.get_json()[0]["liked_by_me"] is False
+
+
+class TestFollowingAndFollowerCount:
+    def test_my_following_requires_auth(self, client):
+        response = client.get("/api/users/me/following")
+        assert response.status_code == 401
+
+    def test_my_following_lists_followed_ids(self, client, amina, brian):
+        client.post(f"/api/users/{brian['user']['id']}/follow", headers=amina["headers"])
+        response = client.get("/api/users/me/following", headers=amina["headers"])
+        assert response.status_code == 200
+        assert response.get_json()["following_ids"] == [brian["user"]["id"]]
+
+    def test_followers_count_does_not_require_auth(self, client, amina, brian):
+        client.post(f"/api/users/{brian['user']['id']}/follow", headers=amina["headers"])
+        response = client.get(f"/api/users/{brian['user']['id']}/followers/count")
+        assert response.status_code == 200
+        assert response.get_json()["count"] == 1
+
+    def test_followers_count_zero_for_unfollowed_user(self, client, amina):
+        response = client.get(f"/api/users/{amina['user']['id']}/followers/count")
+        assert response.get_json()["count"] == 0

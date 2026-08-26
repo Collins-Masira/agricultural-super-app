@@ -59,12 +59,32 @@ export const createPost = createAsyncThunk(
   },
 )
 
+function findPost(state, postId) {
+  if (state.current?.id === postId) return state.current
+  return state.feed.find((p) => p.id === postId) ?? state.userPosts.find((p) => p.id === postId)
+}
+
 export const toggleLike = createAsyncThunk(
   'posts/toggleLike',
-  async (postId, { rejectWithValue }) => {
+  async (postId, { getState, rejectWithValue }) => {
+    // The backend exposes separate like/unlike endpoints (not a toggle),
+    // and doesn't return updated counts -- so the current state is read
+    // here to both pick the right call and compute the optimistic result.
+    const post = findPost(getState().posts, postId)
+    const wasLiked = post?.likedByMe ?? false
+    const currentCount = post?.likeCount ?? 0
+
     try {
-      const result = await postsService.toggleLike(postId)
-      return { postId, ...result }
+      if (wasLiked) {
+        await postsService.unlikePost(postId)
+      } else {
+        await postsService.likePost(postId)
+      }
+      return {
+        postId,
+        likedByMe: !wasLiked,
+        likeCount: Math.max(0, currentCount + (wasLiked ? -1 : 1)),
+      }
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to update like.')
     }

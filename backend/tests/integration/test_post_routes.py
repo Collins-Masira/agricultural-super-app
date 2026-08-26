@@ -214,3 +214,33 @@ class TestLikes:
         post_id = self._create_post(client, amina["headers"])
         response = client.delete(f"/api/posts/{post_id}/like", headers=brian["headers"])
         assert response.status_code == 404
+
+    def test_like_count_and_liked_by_me_on_get_post(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+
+        before = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert before["like_count"] == 0
+        assert before["liked_by_me"] is False
+
+        client.post(f"/api/posts/{post_id}/like", headers=brian["headers"])
+
+        after_brian = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert after_brian["like_count"] == 1
+        assert after_brian["liked_by_me"] is True
+
+        after_amina = client.get(f"/api/posts/{post_id}", headers=amina["headers"]).get_json()
+        assert after_amina["like_count"] == 1
+        assert after_amina["liked_by_me"] is False
+
+        after_anonymous = client.get(f"/api/posts/{post_id}").get_json()
+        assert after_anonymous["like_count"] == 1
+        assert after_anonymous["liked_by_me"] is False
+
+    def test_like_count_on_list_posts(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/like", headers=brian["headers"])
+
+        listing = client.get("/api/posts", headers=brian["headers"]).get_json()
+        post = next(p for p in listing if p["id"] == post_id)
+        assert post["like_count"] == 1
+        assert post["liked_by_me"] is True

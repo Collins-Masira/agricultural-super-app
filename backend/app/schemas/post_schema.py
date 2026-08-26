@@ -74,3 +74,21 @@ class PostSchema(ma.Schema):
         dump_only=True,
         exclude=("post_id",),
     )
+
+    like_count = fields.Method("get_like_count", dump_only=True)
+    liked_by_me = fields.Method("get_liked_by_me", dump_only=True)
+
+    def get_like_count(self, post):
+        return len(post.likes)
+
+    def get_liked_by_me(self, post):
+        """
+        True only when the schema was dumped with a `current_user_id` in
+        its context (see post_routes.py) -- routes that don't know the
+        caller's identity (no valid token) omit the context key entirely,
+        which this defaults to False rather than raising.
+        """
+        current_user_id = self.context.get("current_user_id")
+        if current_user_id is None:
+            return False
+        return any(like.user_id == current_user_id for like in post.likes)

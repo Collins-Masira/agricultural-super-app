@@ -12,6 +12,21 @@ class TestStartAndListConversations:
         assert response.status_code == 201
         assert len(response.get_json()["participants"]) == 2
 
+    def test_conversation_records_its_creator(self, client, amina, brian):
+        # Regression test: Conversation.created_by is NOT NULL, but the
+        # conversation used to be constructed without it, which raised an
+        # IntegrityError on every single conversation ever started.
+        response = client.post(
+            "/api/conversations", headers=amina["headers"], json={"participant_ids": [brian["user"]["id"]]}
+        )
+        assert response.status_code == 201
+
+        from app.extensions import db
+        from app.models import Conversation
+
+        conversation = db.session.get(Conversation, response.get_json()["id"])
+        assert conversation.created_by == amina["user"]["id"]
+
     def test_missing_participant_ids_returns_422(self, client, amina):
         response = client.post("/api/conversations", headers=amina["headers"], json={})
         assert response.status_code == 422

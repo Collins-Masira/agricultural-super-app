@@ -1,6 +1,6 @@
 # Agricultural Super App
 
-> **Status:** Moringa School group project — Day 1 (Week 1) foundation. No application code exists yet.
+> **Status:** MVP implemented and functional — Flask/SQLAlchemy backend with 363 passing tests (99% coverage), React/Redux Toolkit frontend, wired together end-to-end. See [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md) for details.
 
 ## Project Overview
 
@@ -32,24 +32,26 @@ See [docs/project/task-tracker.md](docs/project/task-tracker.md) for task alloca
 
 | Feature | Status |
 | --- | --- |
-| User registration & login | Planned (schema ready) |
-| User profiles + expert verification | Planned (schema ready) |
-| Agricultural posts with images | Planned (schema ready) |
-| Comments & likes | Planned (schema ready) |
-| Communities & membership | Planned (schema ready) |
-| Following experts & communities | Planned (schema ready) |
-| Messaging | Planned (schema ready) |
+| User registration, login, logout, password reset, change-password | Implemented (strong password policy enforced backend + frontend) |
+| Role-based admin system (dashboard, user management, content moderation) | Implemented (backend-enforced; frontend hiding is UX only) |
+| User profiles + expert verification badge | Implemented |
+| Agricultural posts with real device image uploads, likes, comments | Implemented |
+| Communities & membership (create/join/leave) | Implemented |
+| Following experts & users | Implemented |
+| Direct messaging (conversations + threads) | Implemented |
+| AI Farming Assistant | Implemented (requires `ANTHROPIC_API_KEY` on the backend to answer live; degrades gracefully without it) |
+| Password-reset email delivery | Implemented via Flask-Mail (provider-agnostic SMTP); not yet verified against a real SMTP account in this environment — see [backend/README.md](backend/README.md#email-password-reset-delivery) |
 
-None of these are implemented yet. The database schema that supports them is complete (see [Database](#database)).
+See [backend/docs/API.md](backend/docs/API.md) for the full API reference.
 
 ## Repository Structure
 
 ```text
 agricultural-super-app/
-├── frontend/                 # Frontend application (empty — stack not yet selected)
-│   └── README.md             # Frontend purpose and plan
-├── backend/                  # Backend application (empty — stack not yet selected)
-│   └── README.md             # Backend purpose and plan
+├── frontend/                 # React + Redux Toolkit + Vite SPA
+│   └── README.md             # Frontend structure and setup
+├── backend/                  # Flask + SQLAlchemy + Marshmallow API
+│   └── README.md             # Backend structure, API summary, and setup
 ├── docs/                     # Project documentation
 │   ├── architecture.md       # Architecture direction
 │   ├── database.md           # Database documentation
@@ -122,7 +124,24 @@ A repository-level CI foundation runs on GitHub Actions (see [.github/workflows/
 
 ## Development Setup
 
-Not applicable yet — no application code or dependencies exist. Setup instructions will be added when the stack is selected.
+```bash
+# Backend (Flask, port 5000)
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # edit SECRET_KEY, JWT_SECRET_KEY, DATABASE_URL
+export FLASK_APP=wsgi.py
+flask db upgrade
+flask run
+
+# Frontend (Vite, port 5173), in a second terminal
+cd frontend
+npm install
+cp .env.example .env.local   # set VITE_API_BASE_URL=http://localhost:5000/api, VITE_USE_MOCKS=false
+npm run dev
+```
+
+See [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md) for full details.
 
 ## License
 

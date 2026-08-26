@@ -36,6 +36,18 @@ def list_posts(page=1, per_page=20):
     )
 
 
+def list_posts_by_user(user_id, page=1, per_page=20):
+    per_page = min(per_page, MAX_PAGE_SIZE)
+    return (
+        db.session.query(Post)
+        .filter_by(user_id=user_id)
+        .order_by(Post.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+
 def create_post(current_user, data):
     """
     `data` comes from PostSchema.load() and may include a nested

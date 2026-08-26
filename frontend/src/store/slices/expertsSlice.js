@@ -62,10 +62,30 @@ export const fetchFollowersCount = createAsyncThunk(
 
 export const toggleFollow = createAsyncThunk(
   'experts/toggleFollow',
-  async (userId, { rejectWithValue }) => {
+  async (userId, { getState, rejectWithValue }) => {
+    // The backend exposes separate follow/unfollow endpoints (not a
+    // toggle) and doesn't return updated counts -- current state is read
+    // here to both pick the right call and compute the optimistic result.
+    const state = getState().experts
+    const wasFollowing = state.followingIds.includes(userId)
+    const currentFollowersCount = state.followersCounts[userId] ?? 0
+
     try {
-      const summary = await expertsService.toggleFollow(userId)
-      return { userId, summary }
+      if (wasFollowing) {
+        await expertsService.unfollowUser(userId)
+      } else {
+        await expertsService.followUser(userId)
+      }
+      const followingIds = wasFollowing
+        ? state.followingIds.filter((id) => id !== userId)
+        : [...state.followingIds, userId]
+      return {
+        userId,
+        summary: {
+          followingIds,
+          followersCount: Math.max(0, currentFollowersCount + (wasFollowing ? -1 : 1)),
+        },
+      }
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to update follow.')
     }

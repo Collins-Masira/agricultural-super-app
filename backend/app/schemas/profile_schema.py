@@ -1,5 +1,3 @@
-# app/schemas/profile_schema.py
-
 from marshmallow import EXCLUDE, fields, validate
 
 from app.extensions import ma
@@ -11,17 +9,9 @@ class ProfileSchema(ma.Schema):
     """
 
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
-
-    # Owning user is derived from the authenticated session / route,
-    # never accepted from the request body.
     user_id = fields.Integer(dump_only=True)
 
     first_name = fields.String(

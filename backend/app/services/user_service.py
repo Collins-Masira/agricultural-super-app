@@ -2,7 +2,9 @@
 
 from app.errors import ConflictError, NotFoundError, ValidationAPIError
 from app.extensions import db
-from app.models import User, UserFollow
+from app.models import Profile, User, UserFollow
+
+MAX_PAGE_SIZE = 100
 
 
 def get_user_or_404(user_id):
@@ -10,6 +12,51 @@ def get_user_or_404(user_id):
     if user is None:
         raise NotFoundError(f"User {user_id} not found.")
     return user
+
+
+def list_users(role=None, search=None, page=1, per_page=20):
+    """
+    Public user directory -- backs the Experts page (role="expert") and
+    can filter to any role. `search` matches username, first name, or
+    last name (case-insensitive substring), useful once profile fields
+    exist without requiring a dedicated search endpoint.
+    """
+    per_page = min(per_page, MAX_PAGE_SIZE)
+    query = db.session.query(User)
+
+    if role:
+        query = query.filter(User.role == role)
+
+    if search:
+        pattern = f"%{search}%"
+        query = query.outerjoin(Profile, Profile.user_id == User.id).filter(
+            db.or_(
+                User.username.ilike(pattern),
+                Profile.first_name.ilike(pattern),
+                Profile.last_name.ilike(pattern),
+            )
+        )
+
+    return (
+        query.order_by(User.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+
+def list_following_ids(current_user):
+    rows = (
+        db.session.query(UserFollow.following_id)
+        .filter_by(follower_id=current_user.id)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
+def count_followers(user_id):
+    get_user_or_404(user_id)
+    return db.session.query(UserFollow).filter_by(following_id=user_id).count()
 
 
 def upsert_own_profile(current_user, data):

@@ -7,6 +7,8 @@ import './layout.css'
 export function Header() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const isAdmin = user?.user.role === 'admin'
+  const visibleNavItems = headerNavItems.filter((item) => !item.adminOnly || isAdmin)
 
   const displayName =
     user?.profile.firstName && user?.profile.lastName
@@ -20,7 +22,7 @@ export function Header() {
       </NavLink>
 
       <nav className="asa-header__nav" aria-label="Main">
-        {headerNavItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

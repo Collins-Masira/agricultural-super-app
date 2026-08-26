@@ -7,7 +7,14 @@
 # their own route test files -- this file exists for the handling
 # itself, not to re-verify every business rule a second time.
 
-from app.errors import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationAPIError
+from app.errors import (
+    ConflictError,
+    ForbiddenError,
+    InvalidTokenError,
+    NotFoundError,
+    UnauthorizedError,
+    ValidationAPIError,
+)
 
 
 class TestErrorEnvelopeShape:
@@ -82,6 +89,82 @@ class TestApiErrorHierarchy:
         assert err.status_code == 418
         # ...and instances that don't pass one keep the class default.
         assert NotFoundError("Default.").status_code == 404
+
+    def test_invalid_token_error_is_a_401_with_a_code_marker(self):
+        # InvalidTokenError is what jwt_required raises for a genuinely
+        # dead session (missing/expired/forged token, deactivated
+        # account) -- the frontend's global 401 handler forces a logout
+        # ONLY when it sees this marker (see http.js), so this class
+        # existing, being 401, and carrying `code: "invalid_token"` in
+        # its envelope is the entire contract that handler depends on.
+        err = InvalidTokenError("Token has expired.")
+        assert err.status_code == 401
+        assert err.code == "invalid_token"
+        assert err.to_dict() == {"error": "Token has expired.", "code": "invalid_token"}
+
+    def test_plain_unauthorized_error_has_no_code_marker(self):
+        # A plain UnauthorizedError (login with the wrong password,
+        # change-password with the wrong current password) must NOT
+        # carry the invalid_token marker -- these are ordinary domain
+        # failures on a request whose token (if any) is completely
+        # valid, and must never force a logout of the current session.
+        err = UnauthorizedError("Current password is incorrect.")
+        assert err.status_code == 401
+        assert err.code is None
+        assert "code" not in err.to_dict()
+
+
+class TestInvalidTokenCodeMarker:
+    """
+    Regression coverage for a real bug: the frontend used to force-logout
+    the current session on ANY 401 response, anywhere -- including a
+    401 from an authenticated, otherwise-valid request that failed for a
+    business reason (e.g. change-password with the wrong current
+    password). That silently killed a perfectly good admin session, so
+    a later unrelated admin action (e.g. reactivating a user) would then
+    fail with "Missing or malformed Authorization header" for no visible
+    reason. The fix: only requests where jwt_required itself rejects the
+    token carry `code: "invalid_token"` in the error envelope; the
+    frontend keys its force-logout off that marker specifically.
+    """
+
+    def test_missing_auth_header_carries_the_marker(self, client):
+        response = client.get("/api/admin/stats")
+        body = response.get_json()
+        assert response.status_code == 401
+        assert body["code"] == "invalid_token"
+
+    def test_malformed_token_carries_the_marker(self, client):
+        response = client.get("/api/admin/stats", headers={"Authorization": "Bearer not-a-real-jwt"})
+        body = response.get_json()
+        assert response.status_code == 401
+        assert body["code"] == "invalid_token"
+
+    def test_deactivated_users_token_carries_the_marker(self, client, admin_user, amina):
+        client.patch(f"/api/admin/users/{amina['user']['id']}", headers=admin_user["headers"], json={"is_active": False})
+        response = client.get("/api/auth/me", headers=amina["headers"])
+        body = response.get_json()
+        assert response.status_code == 401
+        assert body["code"] == "invalid_token"
+
+    def test_wrong_login_password_does_not_carry_the_marker(self, client, amina):
+        response = client.post("/api/auth/login", json={"username": "amina", "password": "WrongPassword123!"})
+        body = response.get_json()
+        assert response.status_code == 401
+        assert "code" not in body
+
+    def test_wrong_change_password_current_password_does_not_carry_the_marker(self, client, amina):
+        # This is the exact bug: a valid, authenticated request (real
+        # token, real user) that fails for a domain reason. A still-valid
+        # session token must survive this.
+        response = client.put(
+            "/api/auth/change-password",
+            headers=amina["headers"],
+            json={"current_password": "WrongCurrentPassword!", "new_password": "NewStrong123!"},
+        )
+        body = response.get_json()
+        assert response.status_code == 401
+        assert "code" not in body
 
 
 class TestHealthCheck:

@@ -27,6 +27,7 @@
 import pytest
 
 from app import create_app
+from app.auth.jwt import encode_token
 from app.extensions import db as _db
 from app.models import User
 
@@ -91,7 +92,7 @@ def register_user(client):
     Returns a dict: {"user": <dict>, "token": <str>, "headers": <dict>}.
     """
 
-    def _register_user(username="testuser", email=None, password="testpassword123", role="farmer"):
+    def _register_user(username="testuser", email=None, password="TestPassword123!", role="farmer"):
         email = email or f"{username}@example.com"
         response = client.post(
             "/api/auth/register",
@@ -118,3 +119,20 @@ def amina(register_user):
 def brian(register_user):
     """A second registered user, for ownership/authorization tests."""
     return register_user(username="brian")
+
+
+@pytest.fixture
+def admin_user(create_user):
+    """
+    A ready-made admin, for admin-route tests. Built via create_user
+    (direct ORM), not register_user -- registering as "admin" through the
+    public API is deliberately rejected (see user_schema.py), so a real
+    admin account can only ever come from a path like this one: seeded
+    directly, exactly as it would need to be in a real deployment.
+
+    Returns a dict shaped like register_user's, for a consistent
+    {"user", "headers"} interface across fixtures.
+    """
+    user = create_user(username="admin1", email="admin1@example.com", role="admin")
+    token = encode_token(user.id)
+    return {"user": user, "headers": {"Authorization": f"Bearer {token}"}}

@@ -18,3 +18,13 @@ python-dotenv==1.2.2
 
 # Postgres driver -- required for the default DATABASE_URL to connect.
 psycopg2-binary==2.9.12
+
+# Image upload validation (app/services/upload_service.py): decodes and
+# re-encodes every uploaded file to confirm it's a genuine, safe image --
+# not just checking the extension/declared content-type, which a
+# disguised executable could fake.
+Pillow==11.3.0
+
+# Real SMTP email delivery (app/services/email_service.py) -- currently
+# used for password-reset emails.
+Flask-Mail==0.10.0
