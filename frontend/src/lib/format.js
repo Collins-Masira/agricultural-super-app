@@ -6,12 +6,23 @@ const DATE_FORMAT_OPTS = {
   day: 'numeric',
 }
 
+// The backend serializes timestamps as naive UTC (e.g. "2026-08-26T06:16:57.274690"),
+// with no "Z" or offset. `new Date(...)` treats a designator-less string as local
+// time per the ECMA-262 spec, so without this, every timestamp is shifted by the
+// browser's UTC offset. Append "Z" only when no timezone designator is already present.
+function asUtcDate(value) {
+  if (typeof value === 'string' && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) {
+    return new Date(`${value}Z`)
+  }
+  return new Date(value)
+}
+
 export function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, DATE_FORMAT_OPTS)
+  return asUtcDate(value).toLocaleDateString(undefined, DATE_FORMAT_OPTS)
 }
 
 export function formatRelativeTime(value) {
-  const then = new Date(value).getTime()
+  const then = asUtcDate(value).getTime()
   const now = Date.now()
   const diffMs = Math.max(0, now - then)
   const minutes = Math.floor(diffMs / 60_000)

@@ -138,6 +138,202 @@
   border-color: var(--color-danger);
 }
 
+/* ---- Password input ---------------------------------------------------- */
+.asa-password-input {
+  position: relative;
+}
+
+.asa-password-input__field {
+  padding-right: 2.75rem;
+}
+
+.asa-password-input__toggle {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.asa-password-input__toggle:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-muted);
+}
+
+/* ---- Password requirements checklist ----------------------------------- */
+.asa-password-requirements {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.asa-password-requirements__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.asa-password-requirements__item svg {
+  flex-shrink: 0;
+  color: var(--color-danger);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.asa-password-requirements__item--met {
+  color: var(--color-text);
+}
+
+.asa-password-requirements__item--met svg {
+  color: var(--color-success);
+  transform: scale(1.1);
+}
+
+/* ---- Image uploader ----------------------------------------------------- */
+.asa-image-uploader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.asa-image-uploader__tile {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.asa-image-uploader__tile--error {
+  border-color: var(--color-danger);
+}
+
+.asa-image-uploader__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.asa-image-uploader__placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-danger);
+}
+
+.asa-image-uploader__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  background-color: rgb(0 0 0 / 0.45);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-image-uploader__badge {
+  position: absolute;
+  bottom: var(--space-1);
+  left: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-full);
+}
+
+.asa-image-uploader__badge--done {
+  background-color: var(--color-success);
+  color: #fff;
+}
+
+.asa-image-uploader__remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background-color: rgb(0 0 0 / 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.asa-image-uploader__remove:hover {
+  background-color: rgb(0 0 0 / 0.75);
+}
+
+.asa-image-uploader__error {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.125rem var(--space-1);
+  background-color: var(--color-danger);
+  color: #fff;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.asa-image-uploader__add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 6rem;
+  height: 6rem;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+  text-align: center;
+  padding: var(--space-2);
+}
+
+.asa-image-uploader__add:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.asa-image-uploader__add-icon {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
 /* ---- Avatar ----------------------------------------------------------- */
 .asa-avatar {
   display: inline-flex;

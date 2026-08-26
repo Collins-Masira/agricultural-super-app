@@ -31,7 +31,14 @@ export function ProfilePage() {
       <ProfileHero
         profile={user}
         followersCount={followersCount}
-        actions={<Button to="/profile/edit">Edit profile</Button>}
+        actions={
+          <>
+            <Button to="/profile/edit">Edit profile</Button>
+            <Button variant="secondary" to="/profile/change-password">
+              Change password
+            </Button>
+          </>
+        }
       />
 
       <h2 className="asa-profile-section-title">Your posts</h2>

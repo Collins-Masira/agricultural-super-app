@@ -128,50 +128,6 @@
   border-radius: var(--radius-md);
 }
 
-/* ---- Create post ---- */
-.asa-post-create__images {
-  margin-bottom: var(--space-4);
-}
-
-.asa-post-create__image-input {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.asa-post-create__image-input .asa-field {
-  flex: 1;
-}
-
-.asa-post-create__image-list {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: 0;
-}
-
-.asa-post-create__image-item {
-  position: relative;
-}
-
-.asa-post-create__image-item img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-}
-
-.asa-post-create__image-item .asa-btn {
-  position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
-  min-height: 2rem;
-  padding: 0 0.625rem;
-  background-color: var(--color-surface);
-}
-
 .asa-form-error {
   padding: var(--space-3);
   margin: 0 0 var(--space-4);

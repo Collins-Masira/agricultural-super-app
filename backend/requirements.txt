@@ -1,15 +1,30 @@
-# Agricultural Super App backend dependencies
-# The schema docs have not finalised the DBMS; PostgreSQL is the target
-# (see app/config.py DATABASE_URL). Versions are pinned to known-good
-# combinations for Python 3.11.
-
-Flask==3.0.3
+Flask==3.1.3
 Flask-SQLAlchemy==3.1.1
-Flask-Migrate==4.0.7
-Flask-Marshmallow==1.2.1
-marshmallow==3.21.3
+Flask-Migrate==4.1.0
+Flask-Marshmallow==1.5.0
+marshmallow==4.3.1
 marshmallow-sqlalchemy==1.1.0
-SQLAlchemy==2.0.31
-Werkzeug==3.0.3
-python-dotenv==1.0.1
-psycopg2-binary==2.9.9
+
+# JWT auth: standard, minimal, no framework opinions -- issues/verifies
+# access tokens in app/auth/jwt.py.
+PyJWT==2.7.0
+
+# CORS: required for the separate ReactJS/Redux SPA to call this API
+# from the browser at all.
+Flask-Cors==6.0.5
+
+# Loads .env for local dev (flask CLI, wsgi.py).
+python-dotenv==1.2.2
+
+# Postgres driver -- required for the default DATABASE_URL to connect.
+psycopg2-binary==2.9.12
+
+# Image upload validation (app/services/upload_service.py): decodes and
+# re-encodes every uploaded file to confirm it's a genuine, safe image --
+# not just checking the extension/declared content-type, which a
+# disguised executable could fake.
+Pillow==11.3.0
+
+# Real SMTP email delivery (app/services/email_service.py) -- currently
+# used for password-reset emails.
+Flask-Mail==0.10.0

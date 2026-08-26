@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, PageHeader, Textarea } from '@/components/ui'
+import { Button, ImageUploader, Input, PageHeader, Textarea } from '@/components/ui'
 import { updateProfile } from '@/store/slices/profileSlice'
 import { useAppDispatch } from '@/store/hooks'
 import { useAuth, errorMessage } from '@/features/auth/AuthContext'
@@ -16,8 +16,9 @@ export function EditProfilePage() {
     bio: user?.profile.bio ?? '',
     location: user?.profile.location ?? '',
     phoneNumber: user?.profile.phoneNumber ?? '',
-    profileImageUrl: user?.profile.profileImageUrl ?? '',
   })
+  const [profileImageUrl, setProfileImageUrl] = useState(user?.profile.profileImageUrl ?? null)
+  const [imageUploading, setImageUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -27,7 +28,7 @@ export function EditProfilePage() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!user || saving) return
+    if (!user || saving || imageUploading) return
     setSaving(true)
     setError(null)
     try {
@@ -40,7 +41,7 @@ export function EditProfilePage() {
             bio: form.bio.trim() || null,
             location: form.location.trim() || null,
             phoneNumber: form.phoneNumber.trim() || null,
-            profileImageUrl: form.profileImageUrl.trim() || null,
+            profileImageUrl: profileImageUrl || null,
           },
         }),
       ).unwrap()
@@ -56,13 +57,13 @@ export function EditProfilePage() {
     <>
       <PageHeader title="Edit profile" subtitle="Update your public information." />
       <form onSubmit={handleSubmit}>
-        <Input
-          label="Profile image URL"
-          name="profileImageUrl"
-          type="url"
-          value={form.profileImageUrl}
-          onChange={(e) => setField('profileImageUrl', e.target.value)}
-          hint="A publicly accessible image URL."
+        <ImageUploader
+          label="Profile photo"
+          multiple={false}
+          maxFiles={1}
+          value={profileImageUrl ? [profileImageUrl] : []}
+          onChange={(urls) => setProfileImageUrl(urls[0] ?? null)}
+          onBusyChange={setImageUploading}
         />
         <Input
           label="First name"
@@ -106,8 +107,8 @@ export function EditProfilePage() {
           </p>
         )}
         <div className="asa-profile-edit__actions">
-          <Button type="submit" loading={saving}>
-            Save changes
+          <Button type="submit" loading={saving} disabled={saving || imageUploading}>
+            {imageUploading ? 'Waiting for photo to finish uploading…' : 'Save changes'}
           </Button>
           <Button variant="ghost" type="button" onClick={() => navigate('/profile')}>
             Cancel

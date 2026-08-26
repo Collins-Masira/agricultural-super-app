@@ -13,3 +13,4 @@ from .user_follow import UserFollow
 from .conversation import Conversation
 from .conversation_participant import ConversationParticipant
 from .message import Message
+from .password_reset_token import PasswordResetToken

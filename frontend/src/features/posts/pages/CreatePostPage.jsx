@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, PageHeader, Textarea } from '@/components/ui'
+import { Button, ImageUploader, Input, PageHeader, Textarea } from '@/components/ui'
 import { createPost } from '@/store/slices/postsSlice'
 import { useAppDispatch } from '@/store/hooks'
 import { errorMessage } from '@/features/auth/AuthContext'
@@ -11,23 +11,11 @@ export function CreatePostPage() {
   const dispatch = useAppDispatch()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
   const [imageUrls, setImageUrls] = useState([])
+  const [imagesUploading, setImagesUploading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-
-  function addImage() {
-    const trimmed = imageUrl.trim()
-    if (!trimmed) return
-    if (imageUrls.includes(trimmed)) return
-    setImageUrls((prev) => [...prev, trimmed])
-    setImageUrl('')
-  }
-
-  function removeImage(url) {
-    setImageUrls((prev) => prev.filter((u) => u !== url))
-  }
 
   function validate() {
     const errors = {}
@@ -39,7 +27,7 @@ export function CreatePostPage() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!validate() || submitting) return
+    if (!validate() || submitting || imagesUploading) return
     setSubmitting(true)
     setFormError(null)
     try {
@@ -75,41 +63,18 @@ export function CreatePostPage() {
           placeholder="What would you like to share?"
         />
 
-        <div className="asa-post-create__images">
-          <label className="asa-field__label">Images (optional)</label>
-          <div className="asa-post-create__image-input">
-            <Input
-              label=""
-              name="imageUrl"
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="Paste an image URL"
-              aria-label="Image URL"
-            />
-            <Button type="button" variant="secondary" size="sm" onClick={addImage} disabled={!imageUrl.trim()}>
-              Add
-            </Button>
-          </div>
-
-          {imageUrls.length > 0 && (
-            <ul className="asa-post-create__image-list">
-              {imageUrls.map((url) => (
-                <li key={url} className="asa-post-create__image-item">
-                  <img src={url} alt="" />
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeImage(url)} aria-label="Remove image">
-                    &times;
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <ImageUploader
+          label="Photos (optional)"
+          multiple
+          maxFiles={6}
+          onChange={setImageUrls}
+          onBusyChange={setImagesUploading}
+        />
 
         {formError && <p className="asa-form-error" role="alert">{formError}</p>}
 
-        <Button type="submit" loading={submitting} disabled={submitting}>
-          Publish post
+        <Button type="submit" loading={submitting} disabled={submitting || imagesUploading}>
+          {imagesUploading ? 'Waiting for photos to finish uploading…' : 'Publish post'}
         </Button>
       </form>
     </>

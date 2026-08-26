@@ -1,11 +1,15 @@
 import { useCallback, useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { UNAUTHORIZED_EVENT } from '@/lib/http'
 import {
+  changePassword as changePasswordThunk,
+  forgotPassword as forgotPasswordThunk,
   initializeSession,
   login as loginThunk,
   logout as logoutThunk,
   profileUpdated,
   register as registerThunk,
+  resetPassword as resetPasswordThunk,
 } from '@/store/slices/authSlice'
 
 /**
@@ -24,6 +28,14 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     dispatch(initializeSession())
+  }, [dispatch])
+
+  useEffect(() => {
+    function handleUnauthorized() {
+      dispatch(logoutThunk())
+    }
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
   }, [dispatch])
 
   return children
@@ -54,7 +66,33 @@ export function useAuth() {
     [dispatch],
   )
 
-  return { status, user, login, register, logout, refreshProfile }
+  const forgotPassword = useCallback(
+    (email) => dispatch(forgotPasswordThunk(email)).unwrap(),
+    [dispatch],
+  )
+
+  const resetPassword = useCallback(
+    (token, password) => dispatch(resetPasswordThunk({ token, password })).unwrap(),
+    [dispatch],
+  )
+
+  const changePassword = useCallback(
+    (currentPassword, newPassword) =>
+      dispatch(changePasswordThunk({ currentPassword, newPassword })).unwrap(),
+    [dispatch],
+  )
+
+  return {
+    status,
+    user,
+    login,
+    register,
+    logout,
+    refreshProfile,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+  }
 }
 
 /** Normalize an unknown error into a human-readable message. */

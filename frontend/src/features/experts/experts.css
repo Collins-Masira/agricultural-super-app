@@ -82,6 +82,7 @@
 .asa-expert-card__actions {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 /* ---- Expert detail / profile ---- */
@@ -130,6 +131,12 @@
 
 .asa-profile-hero__stat {
   font-weight: var(--font-weight-bold);
+}
+
+.asa-profile-hero__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 @media (min-width: 40rem) {
