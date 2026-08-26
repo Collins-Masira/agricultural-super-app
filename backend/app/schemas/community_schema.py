@@ -13,7 +13,7 @@ class CommunityMemberSchema(ma.Schema):
 
     class Meta:
 
-    id = fields.Integer(dump_only=True)
+       id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
     community_id = fields.Integer(dump_only=True)
     joined_at = fields.DateTime(dump_only=True)
