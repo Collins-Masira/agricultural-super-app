@@ -3,6 +3,10 @@
   font-size: var(--font-size-lg);
 }
 
+.asa-profile-tabs {
+  margin: var(--space-6) 0 var(--space-4);
+}
+
 .asa-profile-edit__actions {
   display: flex;
   gap: var(--space-3);

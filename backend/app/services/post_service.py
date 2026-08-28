@@ -1,21 +1,39 @@
-# app/services/post_service.py
-
-from app.errors import ConflictError, ForbiddenError, NotFoundError
+from app.errors import ConflictError, ForbiddenError, NotFoundError, ValidationAPIError
 from app.extensions import db
-from app.models import Comment, Like, Post, PostImage
+from app.models import Comment, Community, Like, Post, PostImage, SavedPost
+from app.models.like import REACTION_TYPES
+from app.services import community_service
 
 MAX_PAGE_SIZE = 100
 
 
 def _assert_owner(current_user, owner_id, resource_name):
-    """
-    Shared authorization check: the caller must own the resource, or
-    hold the "admin" role. "admin" is deliberately the only override --
-    see user_schema.py for why it can never be self-assigned at
-    registration.
-    """
     if current_user.id != owner_id and current_user.role != "admin":
         raise ForbiddenError(f"You do not have permission to modify this {resource_name}.")
+
+
+def _assert_can_delete_post(current_user, post):
+    if current_user.id == post.user_id or current_user.role == "admin":
+        return
+    if post.community_id is not None:
+        community = db.session.get(Community, post.community_id)
+        if community is not None and community_service.is_admin_member(current_user, community):
+            return
+    raise ForbiddenError("You do not have permission to delete this post.")
+
+
+def _assert_can_post_in_community(current_user, community_id, is_announcement):
+    community = db.session.get(Community, community_id)
+    if community is None:
+        raise NotFoundError(f"Community {community_id} not found.")
+
+    if is_announcement:
+        if not community_service.is_admin_member(current_user, community):
+            raise ForbiddenError("Only community admins can post announcements.")
+        return
+
+    if not community_service.can_post_in_community(current_user, community):
+        raise ForbiddenError("You do not have permission to post in this community.")
 
 
 def get_post_or_404(post_id):
@@ -25,10 +43,11 @@ def get_post_or_404(post_id):
     return post
 
 
-def list_posts(page=1, per_page=20):
+def list_posts(page=1, per_page=20, community_id=None):
     per_page = min(per_page, MAX_PAGE_SIZE)
     return (
         db.session.query(Post)
+        .filter_by(community_id=community_id)
         .order_by(Post.created_at.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
@@ -49,16 +68,18 @@ def list_posts_by_user(user_id, page=1, per_page=20):
 
 
 def create_post(current_user, data):
-    """
-    `data` comes from PostSchema.load() and may include a nested
-    "images" list (only "image_url" survives loading -- see
-    post_schema.py's PostImageSchema, whose id/post_id/created_at are
-    dump_only and therefore stripped automatically).
-    """
     images_data = data.pop("images", [])
+    community_id = data.get("community_id")
+    is_announcement = data.get("is_announcement", False)
+
+    if community_id is not None:
+        _assert_can_post_in_community(current_user, community_id, is_announcement)
+    elif is_announcement:
+        raise ValidationAPIError("is_announcement requires community_id.")
+
     post = Post(user_id=current_user.id, **data)
     db.session.add(post)
-    db.session.flush()  # assigns post.id before attaching child images
+    db.session.flush()
 
     for image in images_data:
         db.session.add(PostImage(post_id=post.id, image_url=image["image_url"]))
@@ -71,10 +92,9 @@ def update_post(current_user, post_id, data):
     post = get_post_or_404(post_id)
     _assert_owner(current_user, post.user_id, "post")
 
-    # Image management goes through dedicated /images endpoints, not a
-    # blanket PUT -- silently accepting an "images" list here would make
-    # it ambiguous whether it's additive or replaces the whole set.
     data.pop("images", None)
+    data.pop("community_id", None)
+    data.pop("is_announcement", None)
 
     for key, value in data.items():
         setattr(post, key, value)
@@ -85,7 +105,7 @@ def update_post(current_user, post_id, data):
 
 def delete_post(current_user, post_id):
     post = get_post_or_404(post_id)
-    _assert_owner(current_user, post.user_id, "post")
+    _assert_can_delete_post(current_user, post)
     db.session.delete(post)
     db.session.commit()
 
@@ -112,7 +132,7 @@ def delete_post_image(current_user, post_id, image_id):
 
 
 def list_comments(post_id):
-    get_post_or_404(post_id)  # 404 if the post itself doesn't exist
+    get_post_or_404(post_id)
     return (
         db.session.query(Comment)
         .filter_by(post_id=post_id)
@@ -121,8 +141,24 @@ def list_comments(post_id):
     )
 
 
+def _assert_can_comment(current_user, post):
+    if post.community_id is None:
+        return
+
+    community = db.session.get(Community, post.community_id)
+    if community is None:
+        return
+
+    if not community.comments_enabled:
+        raise ForbiddenError("Comments are closed by the community admin.")
+
+    if not community_service.can_comment_in_community(current_user, community):
+        raise ForbiddenError("You do not have permission to comment in this community.")
+
+
 def add_comment(current_user, post_id, content):
     post = get_post_or_404(post_id)
+    _assert_can_comment(current_user, post)
     comment = Comment(user_id=current_user.id, post_id=post.id, content=content)
     db.session.add(comment)
     db.session.commit()
@@ -161,7 +197,7 @@ def like_post(current_user, post_id):
     if existing:
         raise ConflictError("You already liked this post.")
 
-    like = Like(user_id=current_user.id, post_id=post.id)
+    like = Like(user_id=current_user.id, post_id=post.id, reaction_type="like")
     db.session.add(like)
     db.session.commit()
     return like
@@ -176,4 +212,120 @@ def unlike_post(current_user, post_id):
     if like is None:
         raise NotFoundError("You have not liked this post.")
     db.session.delete(like)
+    db.session.commit()
+
+
+def set_reaction(current_user, post_id, reaction_type):
+    if reaction_type not in REACTION_TYPES:
+        raise ValidationAPIError(f"reaction_type must be one of: {', '.join(REACTION_TYPES)}.")
+
+    post = get_post_or_404(post_id)
+    existing = (
+        db.session.query(Like)
+        .filter_by(user_id=current_user.id, post_id=post.id)
+        .first()
+    )
+    if existing:
+        existing.reaction_type = reaction_type
+        db.session.commit()
+        return existing
+
+    reaction = Like(user_id=current_user.id, post_id=post.id, reaction_type=reaction_type)
+    db.session.add(reaction)
+    db.session.commit()
+    return reaction
+
+
+def remove_reaction(current_user, post_id):
+    reaction = (
+        db.session.query(Like)
+        .filter_by(user_id=current_user.id, post_id=post_id)
+        .first()
+    )
+    if reaction is None:
+        raise NotFoundError("You have not reacted to this post.")
+    db.session.delete(reaction)
+    db.session.commit()
+
+
+def save_post(current_user, post_id):
+    post = get_post_or_404(post_id)
+    existing = (
+        db.session.query(SavedPost)
+        .filter_by(user_id=current_user.id, post_id=post.id)
+        .first()
+    )
+    if existing:
+        raise ConflictError("You already saved this post.")
+
+    saved = SavedPost(user_id=current_user.id, post_id=post.id)
+    db.session.add(saved)
+    db.session.commit()
+    return saved
+
+
+def unsave_post(current_user, post_id):
+    saved = (
+        db.session.query(SavedPost)
+        .filter_by(user_id=current_user.id, post_id=post_id)
+        .first()
+    )
+    if saved is None:
+        raise NotFoundError("You have not saved this post.")
+    db.session.delete(saved)
+    db.session.commit()
+
+
+def list_saved_posts(current_user, page=1, per_page=20):
+    per_page = min(per_page, MAX_PAGE_SIZE)
+    return (
+        db.session.query(Post)
+        .join(SavedPost, SavedPost.post_id == Post.id)
+        .filter(SavedPost.user_id == current_user.id)
+        .order_by(SavedPost.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+
+def _resolve_root_original(post):
+    return post.original_post or post
+
+
+def _find_repost(user_id, root_original_id):
+    return (
+        db.session.query(Post)
+        .filter_by(user_id=user_id, original_post_id=root_original_id)
+        .first()
+    )
+
+
+def repost_post(current_user, post_id, content=None):
+    original = get_post_or_404(post_id)
+    root_original = _resolve_root_original(original)
+
+    if _find_repost(current_user.id, root_original.id):
+        raise ConflictError("You have already reposted this post.")
+
+    repost = Post(
+        user_id=current_user.id,
+        title=root_original.title,
+        content=(content or "").strip(),
+        original_post_id=root_original.id,
+    )
+    db.session.add(repost)
+    db.session.commit()
+    return repost
+
+
+def unrepost_post(current_user, post_id):
+    original = get_post_or_404(post_id)
+    root_original = _resolve_root_original(original)
+
+    repost = _find_repost(current_user.id, root_original.id)
+    if repost is None:
+        raise NotFoundError("You have not reposted this post.")
+
+    db.session.delete(repost)
     db.session.commit()

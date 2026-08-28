@@ -69,6 +69,19 @@ class AIProvider(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def stream_complete(self, messages, system_prompt):
+        """
+        Like complete(), but a generator yielding the reply text
+        incrementally as chunks arrive, for Server-Sent Events streaming
+        (see app/services/ai_service.py's stream_message). Raises
+        AIProviderError exactly like complete() -- since this is a
+        generator, that can happen on the first `next()` call (nothing
+        yielded yet) or after some chunks were already yielded, and
+        callers must handle both.
+        """
+        raise NotImplementedError
+
 
 class OllamaProvider(AIProvider):
     """
@@ -81,18 +94,37 @@ class OllamaProvider(AIProvider):
 
     REQUEST_TIMEOUT_SECONDS = 60
 
+    # Ollama unloads a model from memory a few minutes after its last
+    # request (default 5m), and reloading it costs multiple seconds --
+    # measured at ~2.3s for llama3.2:1b on modest hardware, on top of
+    # generation time. keep_alive re-arms that timer on every request so
+    # a normal back-and-forth conversation never pays the reload cost
+    # after the first message.
+    KEEP_ALIVE = "5m"
+
+    # Caps a single reply's length so one runaway generation can't stall
+    # a request far longer than a farming-advice answer ever needs to be
+    # -- SYSTEM_PROMPT already asks for concise answers; this is the
+    # backstop. Anthropic has the equivalent via MAX_TOKENS below.
+    MAX_OUTPUT_TOKENS = 512
+
     def __init__(self, base_url, model):
         self.base_url = (base_url or "http://localhost:11434").rstrip("/")
         self.model = model
 
-    def complete(self, messages, system_prompt):
-        body = json.dumps(
+    def _request_body(self, messages, system_prompt, stream):
+        return json.dumps(
             {
                 "model": self.model,
                 "messages": [{"role": "system", "content": system_prompt}, *messages],
-                "stream": False,
+                "stream": stream,
+                "keep_alive": self.KEEP_ALIVE,
+                "options": {"num_predict": self.MAX_OUTPUT_TOKENS},
             }
         ).encode("utf-8")
+
+    def complete(self, messages, system_prompt):
+        body = self._request_body(messages, system_prompt, stream=False)
 
         request_obj = urllib.request.Request(
             f"{self.base_url}/api/chat",
@@ -142,6 +174,67 @@ class OllamaProvider(AIProvider):
                 log_message=f"Ollama returned empty content: {payload!r}",
             )
         return content.strip()
+
+    def stream_complete(self, messages, system_prompt):
+        body = self._request_body(messages, system_prompt, stream=True)
+
+        request_obj = urllib.request.Request(
+            f"{self.base_url}/api/chat",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+
+        try:
+            response = urllib.request.urlopen(request_obj, timeout=self.REQUEST_TIMEOUT_SECONDS)
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", errors="replace")
+            if err.code == 404 or "not found" in detail.lower():
+                raise AIProviderError(
+                    f'The AI model "{self.model}" is not available on the configured Ollama '
+                    f"server. Ask an admin to run `ollama pull {self.model}`.",
+                    log_message=f"Ollama model not found (model={self.model}): {detail}",
+                )
+            raise AIProviderError(
+                "The AI assistant could not process your request right now. Please try again.",
+                log_message=f"Ollama HTTP error {err.code}: {detail}",
+            )
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
+            raise AIProviderError(
+                "The AI assistant is temporarily unavailable (the local AI server is not "
+                "reachable). Please try again shortly.",
+                log_message=f"Ollama unreachable at {self.base_url}: {err}",
+            )
+
+        got_any_content = False
+        try:
+            with response:
+                for raw_line in response:
+                    line = raw_line.decode("utf-8").strip()
+                    if not line:
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    chunk = payload.get("message", {}).get("content", "")
+                    if chunk:
+                        got_any_content = True
+                        yield chunk
+                    if payload.get("done"):
+                        break
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
+            raise AIProviderError(
+                "The AI assistant is temporarily unavailable (the local AI server is not "
+                "reachable). Please try again shortly.",
+                log_message=f"Ollama connection dropped mid-stream at {self.base_url}: {err}",
+            )
+
+        if not got_any_content:
+            raise AIProviderError(
+                "The AI assistant returned an empty response. Please try again.",
+                log_message="Ollama stream produced no content.",
+            )
 
 
 class AnthropicProvider(AIProvider):
@@ -220,6 +313,83 @@ class AnthropicProvider(AIProvider):
                 log_message=f"Anthropic returned empty content: {payload!r}",
             )
         return text
+
+    def stream_complete(self, messages, system_prompt):
+        if not self.api_key:
+            raise AIProviderError(
+                "The AI assistant is not configured. Set the ANTHROPIC_API_KEY "
+                "environment variable on the server (with AI_PROVIDER=anthropic) to "
+                "enable this feature."
+            )
+
+        body = json.dumps(
+            {
+                "model": self.model,
+                "max_tokens": self.MAX_TOKENS,
+                "system": system_prompt,
+                "messages": messages,
+                "stream": True,
+            }
+        ).encode("utf-8")
+
+        request_obj = urllib.request.Request(
+            self.API_URL,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": self.API_VERSION,
+            },
+        )
+
+        try:
+            response = urllib.request.urlopen(request_obj, timeout=self.REQUEST_TIMEOUT_SECONDS)
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", errors="replace")
+            raise AIProviderError(
+                "The AI assistant could not process your request right now. Please try again.",
+                log_message=f"Anthropic HTTP error {err.code}: {detail}",
+            )
+        except (urllib.error.URLError, TimeoutError) as err:
+            raise AIProviderError(
+                "The AI assistant is temporarily unavailable. Please try again shortly.",
+                log_message=f"Anthropic unreachable: {err}",
+            )
+
+        got_any_content = False
+        with response:
+            for raw_line in response:
+                line = raw_line.decode("utf-8").strip()
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    payload = json.loads(line[len("data:"):].strip())
+                except json.JSONDecodeError:
+                    continue
+
+                event_type = payload.get("type")
+                if event_type == "content_block_delta":
+                    delta = payload.get("delta") or {}
+                    if delta.get("type") == "text_delta":
+                        text = delta.get("text", "")
+                        if text:
+                            got_any_content = True
+                            yield text
+                elif event_type == "error":
+                    message = (payload.get("error") or {}).get(
+                        "message", "The AI assistant encountered an error."
+                    )
+                    raise AIProviderError(
+                        "The AI assistant could not process your request right now. Please try again.",
+                        log_message=f"Anthropic stream error: {message}",
+                    )
+
+        if not got_any_content:
+            raise AIProviderError(
+                "The AI assistant returned an empty response. Please try again.",
+                log_message="Anthropic stream produced no content.",
+            )
 
 
 def get_provider(config):

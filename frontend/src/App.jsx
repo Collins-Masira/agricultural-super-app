@@ -27,6 +27,7 @@ import { CommunityDetailPage } from '@/features/communities/pages/CommunityDetai
 import { MessagesPage } from '@/features/messaging/pages/MessagesPage'
 import { ConversationPage } from '@/features/messaging/pages/ConversationPage'
 import { AiAssistantPage } from '@/features/assistant/pages/AiAssistantPage'
+import { AiConversationPage } from '@/features/assistant/pages/AiConversationPage'
 
 function NotFoundPage() {
   return (
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
           { path: 'messages', element: <MessagesPage /> },
           { path: 'messages/:conversationId', element: <ConversationPage /> },
           { path: 'assistant', element: <AiAssistantPage /> },
+          { path: 'assistant/:conversationId', element: <AiConversationPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/edit', element: <EditProfilePage /> },
           { path: 'profile/change-password', element: <ChangePasswordPage /> },

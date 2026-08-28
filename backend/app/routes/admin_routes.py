@@ -13,6 +13,46 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 @admin_bp.get("/stats")
 @admin_required
 def get_stats():
+    """
+    Dashboard stats: counts, AI provider status, and recent activity.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: Aggregate stats.
+        schema:
+          type: object
+          properties:
+            users:
+              type: integer
+            posts:
+              type: integer
+            comments:
+              type: integer
+            communities:
+              type: integer
+            conversations:
+              type: integer
+            messages:
+              type: integer
+            ai:
+              type: object
+            recent_users:
+              type: array
+              items:
+                $ref: '#/definitions/User'
+            recent_posts:
+              type: array
+              items:
+                $ref: '#/definitions/Post'
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+    """
     ai_configured = (
         bool(current_app.config.get("ANTHROPIC_API_KEY"))
         if current_app.config.get("AI_PROVIDER", "ollama") == "anthropic"
@@ -51,6 +91,53 @@ def get_stats():
 @admin_bp.get("/users")
 @admin_required
 def list_users():
+    """
+    List/search users for moderation.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: query
+        name: search
+        type: string
+      - in: query
+        name: role
+        type: string
+      - in: query
+        name: status
+        type: string
+        enum: [active, inactive]
+      - in: query
+        name: page
+        type: integer
+        default: 1
+      - in: query
+        name: per_page
+        type: integer
+        default: 20
+    responses:
+      200:
+        description: A page of users.
+        schema:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/definitions/User'
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+    """
     search = request.args.get("search")
     role = request.args.get("role")
     status = request.args.get("status")
@@ -71,6 +158,32 @@ def list_users():
 @admin_bp.get("/users/<int:user_id>")
 @admin_required
 def get_user(user_id):
+    """
+    Get a single user's full account details.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: The user.
+        schema:
+          $ref: '#/definitions/User'
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+      404:
+        description: User not found.
+        schema:
+          $ref: '#/definitions/Error'
+    """
     user = admin_service.get_user_or_404(user_id)
     return jsonify(user_schema.dump(user)), 200
 
@@ -78,6 +191,46 @@ def get_user(user_id):
 @admin_bp.patch("/users/<int:user_id>")
 @admin_required
 def update_user(user_id):
+    """
+    Activate/deactivate a user, or change their role.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            is_active:
+              type: boolean
+            role:
+              type: string
+    responses:
+      200:
+        description: User updated.
+        schema:
+          $ref: '#/definitions/User'
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+      404:
+        description: User not found.
+        schema:
+          $ref: '#/definitions/Error'
+      422:
+        description: Provide at least one of is_active, role, with the correct type.
+        schema:
+          $ref: '#/definitions/Error'
+    """
     payload = request.get_json(silent=True) or {}
     if "is_active" not in payload and "role" not in payload:
         raise ValidationAPIError("Provide at least one of: is_active, role.")

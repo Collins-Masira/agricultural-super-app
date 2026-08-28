@@ -1,24 +1,10 @@
-# app/schemas/post_schema.py
-
 from marshmallow import EXCLUDE, fields, validate
 
 from app.extensions import ma
 
 
 class PostImageSchema(ma.Schema):
-    """
-    A single image attached to a Post. Nested (many=True) inside
-    PostSchema for both read and create/update flows -- id, post_id, and
-    created_at are dump_only and are therefore ignored automatically if
-    present on load.
-    """
-
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
@@ -28,25 +14,14 @@ class PostImageSchema(ma.Schema):
 
 
 class PostSchema(ma.Schema):
-    """
-    Represents a Post, with its author, images, and comments.
-
-    `comments` is included for read convenience (e.g. a single-post
-    detail view) and excludes the redundant post_id on each nested
-    comment. Comments are still created/updated via their own resource,
-    not written back through this schema.
-    """
-
     class Meta:
-        # Silently drop dump_only fields (id, *_id, created_at,
-        # updated_at, ...) and any other unrecognized keys instead
-        # of rejecting the whole payload with 'Unknown field'.
-        # This matters because clients routinely round-trip a full
-        # GET response back into a PUT/PATCH body.
         unknown = EXCLUDE
 
     id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
+    community_id = fields.Integer(allow_none=True, load_default=None)
+    original_post_id = fields.Integer(dump_only=True, allow_none=True)
+    is_announcement = fields.Boolean(load_default=False)
 
     title = fields.String(
         required=True,
@@ -75,20 +50,70 @@ class PostSchema(ma.Schema):
         exclude=("post_id",),
     )
 
+    original_post = fields.Nested(
+        "PostSchema",
+        dump_only=True,
+        only=("id", "title", "content", "author", "created_at", "images", "is_announcement"),
+    )
+
     like_count = fields.Method("get_like_count", dump_only=True)
     liked_by_me = fields.Method("get_liked_by_me", dump_only=True)
+    reaction_counts = fields.Method("get_reaction_counts", dump_only=True)
+    my_reaction = fields.Method("get_my_reaction", dump_only=True)
+    save_count = fields.Method("get_save_count", dump_only=True)
+    saved_by_me = fields.Method("get_saved_by_me", dump_only=True)
+    repost_count = fields.Method("get_repost_count", dump_only=True)
+    reposted_by_me = fields.Method("get_reposted_by_me", dump_only=True)
+    comments_open = fields.Method("get_comments_open", dump_only=True)
+
+    def _root_original(self, post):
+        return post.original_post or post
 
     def get_like_count(self, post):
         return len(post.likes)
 
     def get_liked_by_me(self, post):
-        """
-        True only when the schema was dumped with a `current_user_id` in
-        its context (see post_routes.py) -- routes that don't know the
-        caller's identity (no valid token) omit the context key entirely,
-        which this defaults to False rather than raising.
-        """
         current_user_id = self.context.get("current_user_id")
         if current_user_id is None:
             return False
         return any(like.user_id == current_user_id for like in post.likes)
+
+    def get_reaction_counts(self, post):
+        counts = {}
+        for like in post.likes:
+            counts[like.reaction_type] = counts.get(like.reaction_type, 0) + 1
+        return counts
+
+    def get_my_reaction(self, post):
+        current_user_id = self.context.get("current_user_id")
+        if current_user_id is None:
+            return None
+        return next(
+            (like.reaction_type for like in post.likes if like.user_id == current_user_id),
+            None,
+        )
+
+    def get_save_count(self, post):
+        return len(post.saves)
+
+    def get_saved_by_me(self, post):
+        current_user_id = self.context.get("current_user_id")
+        if current_user_id is None:
+            return False
+        return any(save.user_id == current_user_id for save in post.saves)
+
+    def get_repost_count(self, post):
+        return len(self._root_original(post).reposts)
+
+    def get_reposted_by_me(self, post):
+        current_user_id = self.context.get("current_user_id")
+        if current_user_id is None:
+            return False
+        root = self._root_original(post)
+        return any(repost.user_id == current_user_id for repost in root.reposts)
+
+    def get_comments_open(self, post):
+        if post.community_id is None:
+            return True
+        community = post.community
+        return community is not None and community.comments_enabled

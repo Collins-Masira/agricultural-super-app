@@ -16,9 +16,10 @@ The backend provides the server-side application for the **Agricultural Super Ap
 | Role-based admin system | Done — see "Admin access" below |
 | Image uploads (real device files, not URLs) | Done — see "Image uploads" below |
 | Routes — auth, users, posts, comments, communities, messages, admin, uploads | Done |
-| Migrations | Tooling wired (Flask-Migrate/Alembic); no migration history committed yet — see "Getting started" |
-| Tests | 363 passing, 99% coverage — see "Testing" |
-| CI | Not yet |
+| Migrations | Flask-Migrate/Alembic, migration history committed under `migrations/versions/` |
+| API docs | Flasgger/Swagger UI at `/apidocs/`, spec at `/apispec.json` — see "API documentation" below |
+| Tests | 548 passing — see "Testing" |
+| CI | `../.github/workflows/backend-ci.yml` — tests, migrations, and Swagger boot check on every push/PR |
 
 See `docs/TECHNICAL_DEBT.md` for known limitations and their priority.
 
@@ -64,6 +65,17 @@ Quick summary — all routes are under `/api`, except `/health`:
 Authenticated routes require `Authorization: Bearer <token>`, issued by `/api/auth/register` or `/api/auth/login`.
 
 Every error response is a consistent JSON envelope: `{"error": "message", "details": {...optional...}}`.
+
+`DELETE /api/posts/<id>` requires the caller to be the post's author, a global admin
+(`role=admin`), or an admin member of the community the post belongs to (community admins cannot
+delete posts outside their own community). See `app/services/post_service.py::_assert_can_delete_post`.
+
+## API documentation
+
+Interactive Swagger UI, generated from the real routes and kept in sync with them automatically:
+`GET /apidocs/` (spec JSON at `/apispec.json`). Authenticated routes are marked accordingly, and
+Swagger UI's "Authorize" button accepts a `Bearer <token>` value to try them directly. This is the
+authoritative, always-current reference; `docs/API.md` is a hand-written narrative companion.
 
 ## Password policy
 

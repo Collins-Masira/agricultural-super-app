@@ -11,6 +11,9 @@ const initialState = {
   createStatus: 'idle',
   createError: null,
   membershipLoadingId: null,
+  settingsStatus: 'idle',
+  settingsError: null,
+  memberActionLoadingUserId: null,
 }
 
 export const fetchCommunities = createAsyncThunk(
@@ -47,6 +50,41 @@ export const createCommunity = createAsyncThunk(
   },
 )
 
+export const updateCommunitySettings = createAsyncThunk(
+  'communities/updateCommunitySettings',
+  async ({ communityId, settings }, { rejectWithValue }) => {
+    try {
+      return await communitiesService.updateCommunitySettings(communityId, settings)
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to update community settings.')
+    }
+  },
+)
+
+export const setMemberRole = createAsyncThunk(
+  'communities/setMemberRole',
+  async ({ communityId, userId, role }, { rejectWithValue }) => {
+    try {
+      await communitiesService.setMemberRole(communityId, userId, role)
+      return { communityId, userId, role }
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to update member role.')
+    }
+  },
+)
+
+export const removeCommunityMember = createAsyncThunk(
+  'communities/removeCommunityMember',
+  async ({ communityId, userId }, { rejectWithValue }) => {
+    try {
+      await communitiesService.removeMember(communityId, userId)
+      return { communityId, userId }
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to remove member.')
+    }
+  },
+)
+
 function isMember(community, userId) {
   return community.members.some((m) => m.userId === userId)
 }
@@ -66,10 +104,6 @@ export const toggleMembership = createAsyncThunk(
       } else {
         await communitiesService.joinCommunity(communityId)
       }
-      // Carry the caller's own {user, profile} along so the optimistic
-      // membership row added below can render a real name/avatar
-      // immediately, instead of a blank placeholder until the next
-      // fetchCommunity() call overwrites it with server data.
       return { communityId, userId, wasMember, me: getState().auth.user }
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to update membership.')
@@ -81,6 +115,7 @@ function applyMembershipChange(community, { userId, wasMember, me }) {
   if (!community) return
   if (wasMember) {
     community.members = community.members.filter((m) => m.userId !== userId)
+    community.myRole = null
   } else {
     community.members = [
       ...community.members,
@@ -88,11 +123,24 @@ function applyMembershipChange(community, { userId, wasMember, me }) {
         id: `optimistic-${userId}`,
         userId,
         communityId: community.id,
+        role: 'member',
         joinedAt: new Date().toISOString(),
         member: me,
       },
     ]
+    community.myRole = 'member'
   }
+}
+
+function applyMemberRoleChange(community, { userId, role }) {
+  if (!community) return
+  const membership = community.members.find((m) => m.userId === userId)
+  if (membership) membership.role = role
+}
+
+function applyMemberRemoval(community, { userId }) {
+  if (!community) return
+  community.members = community.members.filter((m) => m.userId !== userId)
 }
 
 const communitiesSlice = createSlice({
@@ -150,6 +198,46 @@ const communitiesSlice = createSlice({
       })
       .addCase(toggleMembership.rejected, (state) => {
         state.membershipLoadingId = null
+      })
+      .addCase(updateCommunitySettings.pending, (state) => {
+        state.settingsStatus = 'loading'
+        state.settingsError = null
+      })
+      .addCase(updateCommunitySettings.fulfilled, (state, action) => {
+        state.settingsStatus = 'ready'
+        if (state.current?.id === action.payload.id) {
+          state.current = { ...state.current, ...action.payload }
+        }
+        const listIndex = state.list.findIndex((c) => c.id === action.payload.id)
+        if (listIndex !== -1) state.list[listIndex] = { ...state.list[listIndex], ...action.payload }
+      })
+      .addCase(updateCommunitySettings.rejected, (state, action) => {
+        state.settingsStatus = 'error'
+        state.settingsError = action.payload
+      })
+      .addCase(setMemberRole.pending, (state, action) => {
+        state.memberActionLoadingUserId = action.meta.arg.userId
+      })
+      .addCase(setMemberRole.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.communityId) {
+          applyMemberRoleChange(state.current, action.payload)
+        }
+        state.memberActionLoadingUserId = null
+      })
+      .addCase(setMemberRole.rejected, (state) => {
+        state.memberActionLoadingUserId = null
+      })
+      .addCase(removeCommunityMember.pending, (state, action) => {
+        state.memberActionLoadingUserId = action.meta.arg.userId
+      })
+      .addCase(removeCommunityMember.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.communityId) {
+          applyMemberRemoval(state.current, action.payload)
+        }
+        state.memberActionLoadingUserId = null
+      })
+      .addCase(removeCommunityMember.rejected, (state) => {
+        state.memberActionLoadingUserId = null
       })
   },
 })

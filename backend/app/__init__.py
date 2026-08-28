@@ -1,9 +1,11 @@
 import os
 
+from flasgger import Swagger
 from flask import Flask
 from flask_cors import CORS
 
 from app.config import get_config
+from app.docs import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 from app.errors import register_error_handlers
 from app.extensions import db, ma, mail, migrate
 from app.routes import register_blueprints
@@ -55,6 +57,8 @@ def create_app(config_name=None):
     mail.init_app(app)
 
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
+
+    Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
 
     register_error_handlers(app)
     register_blueprints(app)

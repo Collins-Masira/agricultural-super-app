@@ -1,13 +1,3 @@
-/**
- * Normalizers: backend (Flask/Marshmallow, snake_case) -> frontend domain
- * shapes (camelCase, see src/types/domain.js).
- *
- * Kept centralized and explicit (one function per backend shape) rather
- * than a generic recursive key-casing pass, so each mapping stays a
- * direct, readable reflection of backend/docs/API.md -- and so nothing
- * silently "works" against a field that doesn't actually exist.
- */
-
 function emptyProfile() {
   return {
     id: null,
@@ -41,7 +31,6 @@ export function normalizeProfile(p) {
   }
 }
 
-/** A backend User (UserSchema or UserPublicSchema) -> {user, profile}. */
 export function toUserProfile(u) {
   if (!u) return null
   return {
@@ -90,6 +79,17 @@ export function normalizePost(p) {
     comments: (p.comments ?? []).map(normalizeComment),
     likeCount: p.like_count ?? 0,
     likedByMe: p.liked_by_me ?? false,
+    communityId: p.community_id ?? null,
+    originalPostId: p.original_post_id ?? null,
+    originalPost: p.original_post ? normalizePost(p.original_post) : null,
+    reactionCounts: p.reaction_counts ?? {},
+    myReaction: p.my_reaction ?? null,
+    saveCount: p.save_count ?? 0,
+    savedByMe: p.saved_by_me ?? false,
+    repostCount: p.repost_count ?? 0,
+    repostedByMe: p.reposted_by_me ?? false,
+    isAnnouncement: p.is_announcement ?? false,
+    commentsOpen: p.comments_open ?? true,
   }
 }
 
@@ -98,6 +98,7 @@ export function normalizeMembership(m) {
     id: m.id,
     userId: m.user_id,
     communityId: m.community_id,
+    role: m.role ?? 'member',
     joinedAt: m.joined_at,
     member: toUserProfile(m.member),
   }
@@ -114,6 +115,10 @@ export function normalizeCommunity(c) {
     updatedAt: c.updated_at,
     creator: toUserProfile(c.creator),
     members: (c.members ?? []).map(normalizeMembership),
+    postingPermission: c.posting_permission ?? 'everyone',
+    messagingPermission: c.messaging_permission ?? 'everyone',
+    commentsEnabled: c.comments_enabled ?? true,
+    myRole: c.my_role ?? null,
   }
 }
 
@@ -146,5 +151,25 @@ export function normalizeConversation(c) {
     updatedAt: c.updated_at,
     participants: (c.participants ?? []).map(normalizeParticipant),
     messages: (c.messages ?? []).map(normalizeMessage),
+  }
+}
+
+export function normalizeAIMessage(m) {
+  return {
+    id: m.id,
+    conversationId: m.conversation_id,
+    role: m.role,
+    content: m.content,
+    createdAt: m.created_at,
+  }
+}
+
+export function normalizeAIConversation(c) {
+  return {
+    id: c.id,
+    title: c.title ?? null,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    messages: (c.messages ?? []).map(normalizeAIMessage),
   }
 }

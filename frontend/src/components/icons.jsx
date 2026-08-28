@@ -157,6 +157,66 @@ export function ShieldIcon(props) {
   )
 }
 
+export function BookmarkIcon({ filled, ...props }) {
+  return (
+    <svg {...base(props)} fill={filled ? 'currentColor' : 'none'}>
+      <path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  )
+}
+
+export function RepeatIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  )
+}
+
+export function ShareIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9" />
+    </svg>
+  )
+}
+
+export function BotIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="8" width="16" height="12" rx="3" />
+      <path d="M12 8V4M9 4h6" />
+      <circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none" />
+      <path d="M9 17.5h6" />
+    </svg>
+  )
+}
+
+export function ChevronDownIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+export function MoreIcon(props) {
+  return (
+    <svg {...base(props)} fill="currentColor" stroke="none">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  )
+}
+
 export function LeafIcon(props) {
   return (
     <svg {...base(props)}>

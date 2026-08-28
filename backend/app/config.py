@@ -56,6 +56,15 @@ class Config:
     # the "from" address) so this doesn't have to be set twice.
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
 
+    # Comma-separated admin email addresses notified when a new user
+    # registers (see auth_service.register_user). Empty by default --
+    # nobody is notified until this is explicitly set.
+    ADMIN_NOTIFICATION_EMAILS = [
+        email.strip()
+        for email in os.environ.get("ADMIN_NOTIFICATION_EMAILS", "").split(",")
+        if email.strip()
+    ]
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
