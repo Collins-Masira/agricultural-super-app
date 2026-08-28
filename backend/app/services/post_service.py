@@ -2,7 +2,7 @@ from app.errors import ConflictError, ForbiddenError, NotFoundError, ValidationA
 from app.extensions import db
 from app.models import Comment, Community, Like, Post, PostImage, SavedPost
 from app.models.like import REACTION_TYPES
-from app.services import community_service
+from app.services import community_service, notification_service
 
 MAX_PAGE_SIZE = 100
 
@@ -162,6 +162,13 @@ def add_comment(current_user, post_id, content):
     comment = Comment(user_id=current_user.id, post_id=post.id, content=content)
     db.session.add(comment)
     db.session.commit()
+    notification_service.create_notification(
+        recipient_id=post.user_id,
+        actor_id=current_user.id,
+        type="post_comment",
+        post_id=post.id,
+        comment_id=comment.id,
+    )
     return comment
 
 
@@ -200,6 +207,12 @@ def like_post(current_user, post_id):
     like = Like(user_id=current_user.id, post_id=post.id, reaction_type="like")
     db.session.add(like)
     db.session.commit()
+    notification_service.create_notification(
+        recipient_id=post.user_id,
+        actor_id=current_user.id,
+        type="post_like",
+        post_id=post.id,
+    )
     return like
 
 
@@ -233,6 +246,12 @@ def set_reaction(current_user, post_id, reaction_type):
     reaction = Like(user_id=current_user.id, post_id=post.id, reaction_type=reaction_type)
     db.session.add(reaction)
     db.session.commit()
+    notification_service.create_notification(
+        recipient_id=post.user_id,
+        actor_id=current_user.id,
+        type="post_like",
+        post_id=post.id,
+    )
     return reaction
 
 

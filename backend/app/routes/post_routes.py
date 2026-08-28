@@ -9,8 +9,9 @@ from app.schemas import (
     post_image_schema,
     post_schema,
     posts_schema,
+    report_schema,
 )
-from app.services import post_service
+from app.services import post_service, report_service
 
 
 def _dump_posts_for_viewer(posts, many):
@@ -705,6 +706,59 @@ def unsave_post(post_id):
     """
     post_service.unsave_post(get_current_user(), post_id)
     return "", 204
+
+
+@posts_bp.post("/<int:post_id>/report")
+@jwt_required
+def report_post(post_id):
+    """
+    Report a post for moderation review.
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: post_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [spam, harassment, scam, misleading, inappropriate, other]
+            details:
+              type: string
+              maxLength: 1000
+    responses:
+      201:
+        description: Report filed.
+        schema:
+          $ref: '#/definitions/Report'
+      404:
+        description: Post not found.
+        schema:
+          $ref: '#/definitions/Error'
+      409:
+        description: You have already reported this post.
+        schema:
+          $ref: '#/definitions/Error'
+      422:
+        description: Validation failed.
+        schema:
+          $ref: '#/definitions/Error'
+    """
+    data = report_schema.load(request.get_json(silent=True) or {})
+    report = report_service.create_report(
+        get_current_user(), post_id, reason=data["reason"], details=data.get("details")
+    )
+    return jsonify(report_schema.dump(report)), 201
 
 
 @posts_bp.post("/<int:post_id>/repost")

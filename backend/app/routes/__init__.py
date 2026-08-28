@@ -5,6 +5,7 @@ from .ai_routes import ai_bp
 from .auth_routes import auth_bp
 from .community_routes import communities_bp
 from .message_routes import conversations_bp, messages_bp
+from .notification_routes import notifications_bp
 from .post_routes import comments_bp, posts_bp
 from .upload_routes import uploads_bp
 from .user_routes import users_bp
@@ -21,3 +22,4 @@ def register_blueprints(app):
     app.register_blueprint(ai_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(uploads_bp)
+    app.register_blueprint(notifications_bp)

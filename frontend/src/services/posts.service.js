@@ -98,4 +98,8 @@ export const postsService = {
   async unrepostPost(postId) {
     return httpClient.delete(`/posts/${postId}/repost`)
   },
+
+  async reportPost(postId, reason, details) {
+    return httpClient.post(`/posts/${postId}/report`, { reason, details: details || undefined })
+  },
 }

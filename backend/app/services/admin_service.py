@@ -22,6 +22,7 @@ from app.models import (
     Message,
     Post,
     Profile,
+    Report,
     User,
 )
 
@@ -65,6 +66,10 @@ def get_stats(ai_provider, ai_model, ai_configured):
         "communities": {"total": db.session.query(Community).count()},
         "conversations": {"total": db.session.query(Conversation).count()},
         "messages": {"total": db.session.query(Message).count()},
+        "reports": {
+            "total": db.session.query(Report).count(),
+            "pending": db.session.query(Report).filter_by(status="pending").count(),
+        },
         "recent_users": recent_users,
         "recent_posts": recent_posts,
         "ai": {"provider": ai_provider, "model": ai_model, "configured": ai_configured},

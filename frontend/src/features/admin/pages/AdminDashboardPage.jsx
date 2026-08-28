@@ -48,6 +48,13 @@ export function AdminDashboardPage() {
         />
         <StatCard label="Posts" value={stats.posts.total} meta={`${stats.comments.total} comments`} />
         <StatCard label="Communities" value={stats.communities.total} />
+        <Link to="/admin/reports" className="asa-admin-stat-card-link">
+          <StatCard
+            label="Reports"
+            value={stats.reports.pending}
+            meta={`${stats.reports.total} total · pending review`}
+          />
+        </Link>
         <StatCard label="Conversations" value={stats.conversations.total} meta={`${stats.messages.total} messages sent`} />
         <StatCard
           label="AI Assistant"

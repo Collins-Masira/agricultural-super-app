@@ -104,6 +104,12 @@ class Post(db.Model):
         cascade="all, delete-orphan"
     )
 
+    reports = db.relationship(
+        "Report",
+        back_populates="post",
+        cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         db.UniqueConstraint(
             "user_id",

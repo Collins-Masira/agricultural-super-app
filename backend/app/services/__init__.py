@@ -10,6 +10,8 @@ from . import (
     admin_service,
     upload_service,
     email_service,
+    notification_service,
+    report_service,
 )
 
 __all__ = [
@@ -22,4 +24,6 @@ __all__ = [
     "admin_service",
     "upload_service",
     "email_service",
+    "notification_service",
+    "report_service",
 ]

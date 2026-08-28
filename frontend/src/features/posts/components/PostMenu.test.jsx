@@ -13,6 +13,7 @@ vi.mock('@/services', () => ({
   postsService: {
     deletePost: vi.fn(),
     updatePost: vi.fn(),
+    reportPost: vi.fn(),
   },
 }))
 
@@ -97,9 +98,19 @@ describe('PostMenu', () => {
     expect(screen.getByRole('button', { name: /post options/i })).toBeInTheDocument()
   })
 
-  it('does not show the options menu for an unauthorized user', () => {
-    renderMenu({ post: postFixture(), currentUser: otherUser })
+  it('does not show the options menu for an anonymous viewer', () => {
+    renderMenu({ post: postFixture(), currentUser: null })
     expect(screen.queryByRole('button', { name: /post options/i })).not.toBeInTheDocument()
+  })
+
+  it('offers only Report (no Edit/Delete) for a logged-in non-owner', async () => {
+    const user = userEvent.setup()
+    renderMenu({ post: postFixture(), currentUser: otherUser })
+
+    await user.click(screen.getByRole('button', { name: /post options/i }))
+    expect(screen.queryByRole('menuitem', { name: /edit/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /delete/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /report/i })).toBeInTheDocument()
   })
 
   it('shows a confirmation dialog when Delete is chosen', async () => {
@@ -182,7 +193,7 @@ describe('PostMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: /edit/i }))
     await user.clear(screen.getByLabelText(/title/i))
     await user.type(screen.getByLabelText(/title/i), 'Updated title')
-    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     await waitFor(() => expect(store.getState().posts.feed[0].title).toBe('Updated title'))
     expect(postsService.updatePost).toHaveBeenCalledWith(1, {
