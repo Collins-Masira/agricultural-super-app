@@ -1,4 +1,5 @@
-# tests/integration/test_post_routes.py
+from app.services import post_service
+
 
 class TestListAndCreatePosts:
     def test_list_posts_does_not_require_auth(self, client):
@@ -79,6 +80,61 @@ class TestGetUpdateDeletePost:
         post_id = self._create_post(client, amina["headers"])
         response = client.delete(f"/api/posts/{post_id}", headers=brian["headers"])
         assert response.status_code == 403
+
+    def test_delete_without_auth_returns_401(self, client, amina):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.delete(f"/api/posts/{post_id}")
+        assert response.status_code == 401
+
+    def test_delete_unknown_post_returns_404(self, client, amina):
+        response = client.delete("/api/posts/999999", headers=amina["headers"])
+        assert response.status_code == 404
+
+    def test_community_admin_can_delete_a_members_post(self, client, amina, brian):
+        community_id = client.post(
+            "/api/communities", headers=amina["headers"], json={"name": "Maize Farmers"}
+        ).get_json()["id"]
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        post_id = client.post(
+            "/api/posts",
+            headers=brian["headers"],
+            json={"title": "T", "content": "c", "community_id": community_id},
+        ).get_json()["id"]
+
+        response = client.delete(f"/api/posts/{post_id}", headers=amina["headers"])
+        assert response.status_code == 204
+        assert client.get(f"/api/posts/{post_id}").status_code == 404
+
+    def test_community_admin_cannot_delete_unrelated_general_feed_post(self, client, amina, brian):
+        client.post("/api/communities", headers=amina["headers"], json={"name": "Maize Farmers"})
+        post_id = self._create_post(client, brian["headers"])
+
+        response = client.delete(f"/api/posts/{post_id}", headers=amina["headers"])
+        assert response.status_code == 403
+
+    def test_non_admin_member_cannot_delete_anothers_community_post(self, client, amina, brian, register_user):
+        eve = register_user(username="eve")
+        community_id = client.post(
+            "/api/communities", headers=amina["headers"], json={"name": "Maize Farmers"}
+        ).get_json()["id"]
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=eve["headers"])
+        post_id = client.post(
+            "/api/posts",
+            headers=brian["headers"],
+            json={"title": "T", "content": "c", "community_id": community_id},
+        ).get_json()["id"]
+
+        response = client.delete(f"/api/posts/{post_id}", headers=eve["headers"])
+        assert response.status_code == 403
+
+    def test_deleting_a_repost_does_not_delete_the_original(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        repost_id = client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={}).get_json()["id"]
+
+        response = client.delete(f"/api/posts/{repost_id}", headers=brian["headers"])
+        assert response.status_code == 204
+        assert client.get(f"/api/posts/{post_id}").status_code == 200
 
 
 class TestPostImages:
@@ -244,3 +300,421 @@ class TestLikes:
         post = next(p for p in listing if p["id"] == post_id)
         assert post["like_count"] == 1
         assert post["liked_by_me"] is True
+
+
+class TestReactions:
+    def _create_post(self, client, headers):
+        response = client.post("/api/posts", headers=headers, json={"title": "T", "content": "c"})
+        return response.get_json()["id"]
+
+    def test_add_reaction_requires_auth(self, client, amina):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/reactions", json={"reaction_type": "love"})
+        assert response.status_code == 401
+
+    def test_add_reaction_success(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(
+            f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={"reaction_type": "love"}
+        )
+        assert response.status_code == 201
+        assert response.get_json()["reaction_type"] == "love"
+
+    def test_changing_reaction_does_not_duplicate(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={"reaction_type": "like"})
+        client.post(f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={"reaction_type": "fire"})
+
+        detail = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert detail["my_reaction"] == "fire"
+        assert detail["reaction_counts"] == {"fire": 1}
+
+    def test_invalid_reaction_type_returns_422(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(
+            f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={"reaction_type": "angry"}
+        )
+        assert response.status_code == 422
+
+    def test_missing_reaction_type_returns_422(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={})
+        assert response.status_code == 422
+
+    def test_remove_reaction(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/reactions", headers=brian["headers"], json={"reaction_type": "wow"})
+
+        response = client.delete(f"/api/posts/{post_id}/reactions", headers=brian["headers"])
+        assert response.status_code == 204
+
+        detail = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert detail["my_reaction"] is None
+        assert detail["reaction_counts"] == {}
+
+    def test_removing_without_reacting_returns_404(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.delete(f"/api/posts/{post_id}/reactions", headers=brian["headers"])
+        assert response.status_code == 404
+
+    def test_legacy_like_endpoint_still_works_alongside_reactions(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/like", headers=brian["headers"])
+        assert response.status_code == 201
+
+        detail = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert detail["like_count"] == 1
+        assert detail["reaction_counts"] == {"like": 1}
+
+
+class TestSaves:
+    def _create_post(self, client, headers):
+        response = client.post("/api/posts", headers=headers, json={"title": "T", "content": "c"})
+        return response.get_json()["id"]
+
+    def test_save_requires_auth(self, client, amina):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/save")
+        assert response.status_code == 401
+
+    def test_save_and_unsave(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+
+        save_response = client.post(f"/api/posts/{post_id}/save", headers=brian["headers"])
+        assert save_response.status_code == 201
+
+        detail = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert detail["saved_by_me"] is True
+        assert detail["save_count"] == 1
+
+        unsave_response = client.delete(f"/api/posts/{post_id}/save", headers=brian["headers"])
+        assert unsave_response.status_code == 204
+
+        detail_after = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert detail_after["saved_by_me"] is False
+        assert detail_after["save_count"] == 0
+
+    def test_saving_twice_returns_409(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/save", headers=brian["headers"])
+
+        response = client.post(f"/api/posts/{post_id}/save", headers=brian["headers"])
+        assert response.status_code == 409
+
+    def test_unsaving_without_saving_returns_404(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.delete(f"/api/posts/{post_id}/save", headers=brian["headers"])
+        assert response.status_code == 404
+
+    def test_saved_posts_are_user_specific(self, client, amina, brian, register_user):
+        eve = register_user(username="eve")
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/save", headers=brian["headers"])
+
+        brian_saved = client.get("/api/posts/saved", headers=brian["headers"]).get_json()
+        eve_saved = client.get("/api/posts/saved", headers=eve["headers"]).get_json()
+
+        assert [p["id"] for p in brian_saved] == [post_id]
+        assert eve_saved == []
+
+    def test_listing_saved_posts_requires_auth(self, client):
+        response = client.get("/api/posts/saved")
+        assert response.status_code == 401
+
+
+class TestReposts:
+    def _create_post(self, client, headers, title="Pest control tips"):
+        response = client.post("/api/posts", headers=headers, json={"title": title, "content": "Neem oil works."})
+        return response.get_json()["id"]
+
+    def test_repost_requires_auth(self, client, amina):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/repost", json={})
+        assert response.status_code == 401
+
+    def test_repost_success(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(
+            f"/api/posts/{post_id}/repost", headers=brian["headers"], json={"content": "Worth trying!"}
+        )
+        assert response.status_code == 201
+        body = response.get_json()
+        assert body["author"]["username"] == "brian"
+        assert body["content"] == "Worth trying!"
+        assert body["original_post"]["id"] == post_id
+        assert body["original_post"]["author"]["username"] == "amina"
+
+    def test_repost_without_content_is_allowed(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+        assert response.status_code == 201
+        assert response.get_json()["content"] == ""
+
+    def test_repost_appears_in_general_feed_with_attribution(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+
+        feed = client.get("/api/posts").get_json()
+        repost = next(p for p in feed if p["author"]["username"] == "brian")
+        assert repost["original_post"]["author"]["username"] == "amina"
+
+    def test_reposting_twice_returns_409(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+
+        response = client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+        assert response.status_code == 409
+
+    def test_reposting_unknown_post_returns_404(self, client, amina):
+        response = client.post("/api/posts/999999/repost", headers=amina["headers"], json={})
+        assert response.status_code == 404
+
+    def test_repost_count_reflects_on_original(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+
+        detail = client.get(f"/api/posts/{post_id}").get_json()
+        assert detail["repost_count"] == 1
+
+    def test_reposted_by_me_toggles_and_persists(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+
+        before = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert before["reposted_by_me"] is False
+
+        client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+        after_repost = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert after_repost["reposted_by_me"] is True
+        assert after_repost["repost_count"] == 1
+
+        unrepost_response = client.delete(f"/api/posts/{post_id}/repost", headers=brian["headers"])
+        assert unrepost_response.status_code == 204
+
+        after_unrepost = client.get(f"/api/posts/{post_id}", headers=brian["headers"]).get_json()
+        assert after_unrepost["reposted_by_me"] is False
+        assert after_unrepost["repost_count"] == 0
+
+    def test_unrepost_requires_auth(self, client, amina):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.delete(f"/api/posts/{post_id}/repost")
+        assert response.status_code == 401
+
+    def test_unreposting_without_reposting_returns_404(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        response = client.delete(f"/api/posts/{post_id}/repost", headers=brian["headers"])
+        assert response.status_code == 404
+
+    def test_repost_then_unrepost_then_repost_again(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+        client.delete(f"/api/posts/{post_id}/repost", headers=brian["headers"])
+
+        response = client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={})
+        assert response.status_code == 201
+
+    def test_repost_count_shows_correctly_from_a_reposted_cards_perspective(self, client, amina, brian, register_user):
+        eve = register_user(username="eve")
+        post_id = self._create_post(client, amina["headers"])
+        repost = client.post(f"/api/posts/{post_id}/repost", headers=brian["headers"], json={}).get_json()
+
+        eve_view_of_repost = client.get(f"/api/posts/{repost['id']}", headers=eve["headers"]).get_json()
+        assert eve_view_of_repost["repost_count"] == 1
+        assert eve_view_of_repost["reposted_by_me"] is False
+
+        client.post(f"/api/posts/{repost['id']}/repost", headers=eve["headers"], json={})
+        eve_view_after = client.get(f"/api/posts/{repost['id']}", headers=eve["headers"]).get_json()
+        assert eve_view_after["repost_count"] == 2
+        assert eve_view_after["reposted_by_me"] is True
+
+
+class TestCommunityPosts:
+    def _create_community(self, client, headers, name="Maize Farmers"):
+        response = client.post("/api/communities", headers=headers, json={"name": name})
+        return response.get_json()["id"]
+
+    def test_member_can_create_post_in_community(self, client, amina):
+        community_id = self._create_community(client, amina["headers"])
+        response = client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "T", "content": "c", "community_id": community_id},
+        )
+        assert response.status_code == 201
+        assert response.get_json()["community_id"] == community_id
+
+    def test_non_member_cannot_create_post_in_community(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        response = client.post(
+            "/api/posts",
+            headers=brian["headers"],
+            json={"title": "T", "content": "c", "community_id": community_id},
+        )
+        assert response.status_code == 403
+
+    def test_posting_to_unknown_community_returns_404(self, client, amina):
+        response = client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "T", "content": "c", "community_id": 999999},
+        )
+        assert response.status_code == 404
+
+    def test_community_feed_lists_only_that_communitys_posts(self, client, amina):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "In community", "content": "c", "community_id": community_id},
+        )
+        client.post("/api/posts", headers=amina["headers"], json={"title": "General", "content": "c"})
+
+        response = client.get(f"/api/communities/{community_id}/posts")
+        assert response.status_code == 200
+        titles = [p["title"] for p in response.get_json()]
+        assert titles == ["In community"]
+
+    def test_general_feed_excludes_community_posts(self, client, amina):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "In community", "content": "c", "community_id": community_id},
+        )
+        client.post("/api/posts", headers=amina["headers"], json={"title": "General", "content": "c"})
+
+        response = client.get("/api/posts")
+        titles = [p["title"] for p in response.get_json()]
+        assert titles == ["General"]
+
+    def test_community_feed_for_unknown_community_returns_404(self, client):
+        response = client.get("/api/communities/999999/posts")
+        assert response.status_code == 404
+
+    def test_experts_only_posting_enforced_over_http(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        client.put(
+            f"/api/communities/{community_id}", headers=amina["headers"], json={"posting_permission": "experts_only"}
+        )
+
+        response = client.post(
+            "/api/posts",
+            headers=brian["headers"],
+            json={"title": "T", "content": "c", "community_id": community_id},
+        )
+        assert response.status_code == 403
+
+
+class TestAnnouncements:
+    def _create_community(self, client, headers, name="Maize Farmers"):
+        response = client.post("/api/communities", headers=headers, json={"name": name})
+        return response.get_json()["id"]
+
+    def test_admin_can_post_announcement(self, client, amina):
+        community_id = self._create_community(client, amina["headers"])
+        response = client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={
+                "title": "Workshop",
+                "content": "9am tomorrow",
+                "community_id": community_id,
+                "is_announcement": True,
+            },
+        )
+        assert response.status_code == 201
+        assert response.get_json()["is_announcement"] is True
+
+    def test_member_cannot_post_announcement(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+
+        response = client.post(
+            "/api/posts",
+            headers=brian["headers"],
+            json={"title": "Fake", "content": "c", "community_id": community_id, "is_announcement": True},
+        )
+        assert response.status_code == 403
+
+    def test_announcement_appears_in_community_feed(self, client, amina):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "Workshop", "content": "9am", "community_id": community_id, "is_announcement": True},
+        )
+
+        feed = client.get(f"/api/communities/{community_id}/posts").get_json()
+        assert feed[0]["is_announcement"] is True
+
+
+class TestCommentModeration:
+    def _create_community(self, client, headers, name="Maize Farmers"):
+        response = client.post("/api/communities", headers=headers, json={"name": name})
+        return response.get_json()["id"]
+
+    def _create_community_post(self, client, headers, community_id):
+        response = client.post(
+            "/api/posts", headers=headers, json={"title": "T", "content": "c", "community_id": community_id}
+        )
+        return response.get_json()["id"]
+
+    def test_comments_work_when_enabled(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        post_id = self._create_community_post(client, amina["headers"], community_id)
+
+        response = client.post(
+            f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Nice!"}
+        )
+        assert response.status_code == 201
+
+    def test_comments_fail_when_disabled(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        post_id = self._create_community_post(client, amina["headers"], community_id)
+        client.put(
+            f"/api/communities/{community_id}", headers=amina["headers"], json={"comments_enabled": False}
+        )
+
+        response = client.post(
+            f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Nice!"}
+        )
+        assert response.status_code == 403
+
+    def test_post_is_still_visible_when_comments_are_closed(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        post_id = self._create_community_post(client, amina["headers"], community_id)
+        client.put(
+            f"/api/communities/{community_id}", headers=amina["headers"], json={"comments_enabled": False}
+        )
+
+        response = client.get(f"/api/posts/{post_id}", headers=brian["headers"])
+        assert response.status_code == 200
+        assert response.get_json()["comments_open"] is False
+
+    def test_manually_forged_request_still_rejected_when_comments_disabled(self, client, amina, brian):
+        community_id = self._create_community(client, amina["headers"])
+        client.post(f"/api/communities/{community_id}/members", headers=brian["headers"])
+        post_id = self._create_community_post(client, amina["headers"], community_id)
+        client.put(
+            f"/api/communities/{community_id}", headers=amina["headers"], json={"comments_enabled": False}
+        )
+
+        response = client.post(
+            f"/api/posts/{post_id}/comments",
+            headers=brian["headers"],
+            json={"content": "I am bypassing the UI"},
+        )
+        assert response.status_code == 403
+        assert post_service.get_post_or_404(post_id).comments == []
+
+    def test_general_feed_comments_are_unaffected_by_community_settings(self, client, amina, brian):
+        response = client.post("/api/posts", headers=amina["headers"], json={"title": "T", "content": "c"})
+        post_id = response.get_json()["id"]
+
+        comment_response = client.post(
+            f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Nice!"}
+        )
+        assert comment_response.status_code == 201

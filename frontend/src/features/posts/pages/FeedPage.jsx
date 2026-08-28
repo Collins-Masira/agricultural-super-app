@@ -3,6 +3,7 @@ import { Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/comp
 import { fetchFeed } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { PostCard } from '../components/PostCard'
+import { QuickComposer } from '../components/QuickComposer'
 
 export function FeedPage() {
   const dispatch = useAppDispatch()
@@ -23,6 +24,8 @@ export function FeedPage() {
           <Button to="/create">New post</Button>
         }
       />
+
+      <QuickComposer />
 
       {status === 'loading' && <LoadingState label="Loading posts…" />}
       {status === 'error' && <ErrorState message={error ?? undefined} onRetry={() => dispatch(fetchFeed({ page: 1, pageSize: 10 }))} />}

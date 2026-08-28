@@ -128,6 +128,18 @@ class User(db.Model):
         back_populates="creator"
     )
 
+    ai_conversations = db.relationship(
+        "AIConversation",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    saved_posts = db.relationship(
+        "SavedPost",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
     # -------------------------
     # Password methods
     # -------------------------

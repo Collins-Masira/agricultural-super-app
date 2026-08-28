@@ -5,6 +5,10 @@ Flask-Marshmallow==1.5.0
 marshmallow==4.3.1
 marshmallow-sqlalchemy==1.1.0
 
+# Serves interactive Swagger UI docs for the real API at /apidocs/, built
+# from YAML specs in each route's docstring (app/routes/*.py).
+flasgger==0.9.7.1
+
 # JWT auth: standard, minimal, no framework opinions -- issues/verifies
 # access tokens in app/auth/jwt.py.
 PyJWT==2.7.0

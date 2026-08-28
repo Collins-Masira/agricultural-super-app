@@ -21,13 +21,18 @@ actual model. The frontend only ever talks to this Flask endpoint; it
 never sees which provider answered or any provider credentials.
 """
 
+from datetime import datetime
+
 from flask import current_app
 
-from app.errors import ApiError
+from app.errors import ApiError, ForbiddenError, NotFoundError, ValidationAPIError
+from app.extensions import db
+from app.models import AIConversation, AIMessage
 from app.services.ai_providers import AIProviderError, get_provider
 
 MAX_HISTORY_MESSAGES = 20
 MAX_MESSAGE_LENGTH = 4000
+CONVERSATION_TITLE_MAX_LENGTH = 60
 
 SYSTEM_PROMPT = (
     "You are the AI Farming Assistant inside AgriConnect, a community app "
@@ -70,3 +75,189 @@ def ask_assistant(messages):
     except AIProviderError as err:
         current_app.logger.error("AI assistant provider error: %s", err.log_message)
         raise AIServiceUnavailableError(err.public_message)
+
+
+# ---------------------------------------------------------------------------
+# Persistent conversations (app/models/ai_conversation.py, ai_message.py).
+#
+# Deliberately separate from the ask_assistant()/AIProvider machinery above
+# only in that these functions add persistence around it -- the actual
+# model call still goes through get_provider().complete()/.stream_complete(),
+# so there is exactly one place ("SYSTEM_PROMPT" + the provider layer) that
+# knows how to talk to the AI.
+# ---------------------------------------------------------------------------
+
+
+def create_conversation(user, title=None):
+    conversation = AIConversation(user_id=user.id, title=title or None)
+    db.session.add(conversation)
+    db.session.commit()
+    return conversation
+
+
+def list_conversations(user):
+    return (
+        AIConversation.query.filter_by(user_id=user.id)
+        .order_by(AIConversation.updated_at.desc())
+        .all()
+    )
+
+
+def get_conversation_or_404(conversation_id):
+    conversation = db.session.get(AIConversation, conversation_id)
+    if conversation is None:
+        raise NotFoundError(f"Conversation {conversation_id} not found.")
+    return conversation
+
+
+def get_conversation_for_user(user, conversation_id):
+    """
+    Combines the existence check and the ownership check -- the single
+    entry point routes should call rather than composing
+    get_conversation_or_404() + an ownership check themselves. Mirrors
+    message_service.get_conversation_for_user's shape: 404 if the
+    conversation doesn't exist at all, 403 if it exists but belongs to
+    someone else -- so a caller can never see or touch another user's AI
+    conversation.
+    """
+    conversation = get_conversation_or_404(conversation_id)
+    if conversation.user_id != user.id:
+        raise ForbiddenError("You do not have access to this conversation.")
+    return conversation
+
+
+def delete_conversation(user, conversation_id):
+    conversation = get_conversation_for_user(user, conversation_id)
+    db.session.delete(conversation)
+    db.session.commit()
+
+
+def _derive_title(content):
+    stripped = content.strip()
+    if len(stripped) <= CONVERSATION_TITLE_MAX_LENGTH:
+        return stripped
+    return stripped[: CONVERSATION_TITLE_MAX_LENGTH - 3].rstrip() + "..."
+
+
+def _validate_content(content):
+    if not isinstance(content, str) or not content.strip():
+        raise ValidationAPIError("content is required.")
+    if len(content) > MAX_MESSAGE_LENGTH:
+        raise ValidationAPIError(f"Message content cannot exceed {MAX_MESSAGE_LENGTH} characters.")
+    return content.strip()
+
+
+def _recent_context(conversation_id):
+    """
+    The last MAX_HISTORY_MESSAGES messages (chronological order), not
+    the whole conversation -- this is what keeps a long-running
+    conversation from sending an ever-growing (slower, costlier) prompt
+    to the AI provider on every turn. See module docstring for the
+    provider-independent request flow this feeds into.
+    """
+    recent = (
+        AIMessage.query.filter_by(conversation_id=conversation_id)
+        .order_by(AIMessage.created_at.desc())
+        .limit(MAX_HISTORY_MESSAGES)
+        .all()
+    )
+    recent.reverse()
+    return recent
+
+
+def _save_user_message(conversation, content):
+    user_message = AIMessage(conversation_id=conversation.id, role="user", content=content)
+    db.session.add(user_message)
+    if conversation.title is None:
+        conversation.title = _derive_title(content)
+    conversation.updated_at = datetime.utcnow()
+    db.session.commit()
+    return user_message
+
+
+def send_message(user, conversation_id, content):
+    """
+    Full non-streaming turn: authenticate/authorize (via
+    get_conversation_for_user), save the user's message, ask the AI for
+    a reply using only the recent context window, save the reply.
+
+    If the AI call fails, the user's message is already committed --
+    it's a complete, real record of what they sent -- but no assistant
+    message is created, so there is never a half-written reply row.
+    """
+    conversation = get_conversation_for_user(user, conversation_id)
+    content = _validate_content(content)
+    user_message = _save_user_message(conversation, content)
+
+    context = [{"role": m.role, "content": m.content} for m in _recent_context(conversation.id)]
+
+    try:
+        provider = get_provider(current_app.config)
+        reply = provider.complete(context, SYSTEM_PROMPT)
+    except AIProviderError as err:
+        current_app.logger.error("AI assistant provider error: %s", err.log_message)
+        raise AIServiceUnavailableError(err.public_message)
+
+    assistant_message = AIMessage(conversation_id=conversation.id, role="assistant", content=reply)
+    db.session.add(assistant_message)
+    conversation.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return user_message, assistant_message
+
+
+def stream_message(user, conversation_id, content):
+    """
+    Like send_message(), but returns (user_message, chunk_generator)
+    instead of (user_message, assistant_message) -- for Server-Sent
+    Events (see app/routes/ai_routes.py).
+
+    Authorization, validation, and saving the user's message all happen
+    eagerly, before this function returns, so a bad conversation id or
+    invalid content raises a normal exception the route can turn into a
+    normal JSON error response -- exactly like send_message(). Only
+    failures *during generation* are the generator's problem, since by
+    then the HTTP response has already started streaming and can't
+    switch to a JSON error body/status code anymore; see the generator
+    below for how those are surfaced instead.
+
+    The generator yields plain text chunks as they arrive. Once
+    exhausted, the full assistant reply has already been saved to the
+    database (or, on failure, deliberately has not been -- see below).
+    """
+    conversation = get_conversation_for_user(user, conversation_id)
+    content = _validate_content(content)
+    user_message = _save_user_message(conversation, content)
+
+    context = [{"role": m.role, "content": m.content} for m in _recent_context(conversation.id)]
+
+    try:
+        provider = get_provider(current_app.config)
+    except AIProviderError as err:
+        current_app.logger.error("AI assistant provider error: %s", err.log_message)
+        raise AIServiceUnavailableError(err.public_message)
+
+    def generate_chunks():
+        chunks = []
+        try:
+            for chunk in provider.stream_complete(context, SYSTEM_PROMPT):
+                chunks.append(chunk)
+                yield chunk
+        except AIProviderError as err:
+            # However much (if anything) already reached the client, it
+            # isn't a complete, trustworthy reply -- don't persist a
+            # truncated assistant message. The route surfaces this
+            # failure to the client via an in-band SSE error event
+            # (the HTTP response itself is already committed to 200 by
+            # this point, so raising here wouldn't reach the client as
+            # a clean error response anyway).
+            current_app.logger.error("AI assistant provider error (stream): %s", err.log_message)
+            raise
+
+        full_text = "".join(chunks).strip()
+        assistant_message = AIMessage(conversation_id=conversation.id, role="assistant", content=full_text)
+        db.session.add(assistant_message)
+        conversation.updated_at = datetime.utcnow()
+        db.session.commit()
+
+    return user_message, generate_chunks()

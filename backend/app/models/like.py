@@ -3,6 +3,8 @@
 from datetime import datetime
 from app.extensions import db
 
+REACTION_TYPES = ("like", "love", "funny", "wow", "sad", "fire")
+
 
 class Like(db.Model):
     __tablename__ = "likes"
@@ -22,6 +24,13 @@ class Like(db.Model):
         db.Integer,
         db.ForeignKey("posts.id", ondelete="CASCADE"),
         nullable=False
+    )
+
+    reaction_type = db.Column(
+        db.String(20),
+        nullable=False,
+        default="like",
+        server_default="like"
     )
 
     created_at = db.Column(
@@ -45,5 +54,9 @@ class Like(db.Model):
             "user_id",
             "post_id",
             name="unique_user_post_like"
+        ),
+        db.CheckConstraint(
+            f"reaction_type IN {REACTION_TYPES}",
+            name="ck_likes_reaction_type"
         ),
     )

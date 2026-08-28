@@ -1,7 +1,7 @@
-# app/models/community_member.py
-
 from datetime import datetime
 from app.extensions import db
+
+COMMUNITY_MEMBER_ROLES = ("member", "admin")
 
 
 class CommunityMember(db.Model):
@@ -22,6 +22,13 @@ class CommunityMember(db.Model):
         db.Integer,
         db.ForeignKey("communities.id", ondelete="CASCADE"),
         nullable=False
+    )
+
+    role = db.Column(
+        db.String(20),
+        nullable=False,
+        default="member",
+        server_default="member"
     )
 
     joined_at = db.Column(
@@ -45,5 +52,9 @@ class CommunityMember(db.Model):
             "user_id",
             "community_id",
             name="unique_community_member"
+        ),
+        db.CheckConstraint(
+            f"role IN {COMMUNITY_MEMBER_ROLES}",
+            name="ck_community_members_role"
         ),
     )

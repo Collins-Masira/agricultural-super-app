@@ -16,6 +16,7 @@ The database is the single source of truth for the MVP: who users are, their pro
 - Following agricultural experts/users and communities
 - Messaging experts and communities
 - Expert verification
+- AI Farming Assistant, with persisted conversation history
 
 Explicitly **out of MVP scope** (no tables for these): farms, crops, livestock, marketplace, products, orders, payments, weather.
 
@@ -27,7 +28,7 @@ The hosted dbdiagram (reference of record):
 
 > **Note:** the automation environment cannot modify the hosted dbdiagram. The current verified MVP schema is maintained in [schema.dbml](schema.dbml). Paste that file into dbdiagram.io to update the hosted diagram.
 
-## Tables (13)
+## Tables (15)
 
 | Table | Purpose |
 | --- | --- |
@@ -44,6 +45,8 @@ The hosted dbdiagram (reference of record):
 | `conversations` | Conversations (peer-to-peer or community threads) |
 | `conversation_participants` | Users in a conversation |
 | `messages` | Messages within conversations |
+| `ai_conversations` | AI Farming Assistant conversation threads (one per user session with the assistant) |
+| `ai_messages` | Turns within an `ai_conversations` thread (`role`: user/assistant/system) |
 
 ## Relationships
 
@@ -68,6 +71,8 @@ The hosted dbdiagram (reference of record):
 | `conversation_participants.user_id` → `users.id` | N:M via participants |
 | `messages.conversation_id` → `conversations.id` | 1:N |
 | `messages.sender_id` → `users.id` | 1:N |
+| `ai_conversations.user_id` → `users.id` | 1:N |
+| `ai_messages.conversation_id` → `ai_conversations.id` | 1:N |
 
 ## Expert Account Explanation
 

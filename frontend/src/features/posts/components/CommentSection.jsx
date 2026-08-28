@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Avatar, Button, Modal, Textarea } from '@/components/ui'
-import { VerifiedBadge } from '@/components/ui'
+import { Avatar, Button, Modal, Textarea, VerifiedBadge } from '@/components/ui'
 import { formatRelativeTime } from '@/lib/format'
 import { addComment } from '@/store/slices/postsSlice'
 import { useAppDispatch } from '@/store/hooks'
@@ -63,9 +62,14 @@ export function CommentSection({ post }) {
             })}
           </ul>
         )}
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          Add a comment
-        </Button>
+
+        {post.commentsOpen === false ? (
+          <p className="asa-comments__closed">🔒 Comments are closed by the community admin.</p>
+        ) : (
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            Add a comment
+          </Button>
+        )}
       </section>
 
       <Modal open={open} title="Add a comment" onClose={() => setOpen(false)}>

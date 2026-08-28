@@ -6,6 +6,7 @@ import profileReducer from './slices/profileSlice'
 import communitiesReducer from './slices/communitiesSlice'
 import messagesReducer from './slices/messagesSlice'
 import adminReducer from './slices/adminSlice'
+import aiReducer from './slices/aiSlice'
 
 /**
  * Redux store for the Agricultural Super App frontend.
@@ -17,6 +18,7 @@ import adminReducer from './slices/adminSlice'
  * - experts     — expert discovery, expert profile, follows
  * - communities — community discovery, membership
  * - messages    — conversations and messages
+ * - ai          — AI Farming Assistant conversations and messages
  *
  * The slices call the service layer (src/services), which routes to the
  * in-repo mock data layer when VITE_USE_MOCKS=true, and to the real Flask
@@ -31,6 +33,7 @@ export const store = configureStore({
     communities: communitiesReducer,
     messages: messagesReducer,
     admin: adminReducer,
+    ai: aiReducer,
   },
 })
 

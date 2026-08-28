@@ -520,6 +520,56 @@
   color: var(--color-danger);
 }
 
+/* ---- Reaction picker ---------------------------------------------------- */
+.asa-reaction-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.asa-reaction-picker__trigger--active {
+  color: var(--color-primary);
+}
+
+.asa-reaction-picker__menu {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  bottom: calc(100% + 0.35rem);
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  max-width: calc(100vw - 2rem);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.asa-reaction-picker__option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  flex-shrink: 0;
+}
+
+.asa-reaction-picker__option:hover,
+.asa-reaction-picker__option--active {
+  background-color: var(--color-surface-muted);
+  transform: scale(1.15);
+}
+
 /* ---- Tabs ------------------------------------------------------------- */
 .asa-tabs {
   display: flex;
@@ -622,6 +672,58 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+}
+
+.asa-post-content > *:first-child {
+  margin-top: 0;
+}
+
+.asa-post-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.asa-post-content p {
+  margin: 0 0 var(--space-3);
+}
+
+.asa-post-content h1,
+.asa-post-content h2,
+.asa-post-content h3,
+.asa-post-content h4,
+.asa-post-content h5,
+.asa-post-content h6 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+}
+
+.asa-post-content ul,
+.asa-post-content ol {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.asa-post-content li {
+  margin-bottom: var(--space-1);
+}
+
+.asa-post-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.asa-post-content blockquote {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.asa-post-content code {
+  font-family: monospace;
+  background-color: var(--color-surface-muted);
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius-sm);
 }
 
 .asa-page-header__actions {

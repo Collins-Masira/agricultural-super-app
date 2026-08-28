@@ -1,7 +1,3 @@
-/* ==========================================================================
-   Communities feature — styles
-   ========================================================================== */
-
 .asa-community-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -97,6 +93,9 @@
 }
 
 .asa-community-hero__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
@@ -111,16 +110,142 @@
 .asa-community-members {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 .asa-community-member {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asa-community-member:last-child {
+  border-bottom: 0;
 }
 
 .asa-community-member__name {
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
+}
+
+.asa-community-member__badge {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 0.1rem var(--space-2);
+}
+
+.asa-community-tabs {
+  margin-bottom: var(--space-4);
+}
+
+.asa-community-join-hint {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background-color: var(--color-surface-muted);
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.asa-community-about dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.asa-community-about dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.asa-community-about dd {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.asa-community-discovery__search {
+  margin-bottom: var(--space-5);
+}
+
+.asa-community-discovery__section {
+  margin-bottom: var(--space-6);
+}
+
+.asa-community-discovery__section-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-3);
+}
+
+.asa-community-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.asa-community-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.asa-community-settings__field select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.asa-community-settings__checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.asa-community-hero__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.asa-community-member-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.asa-community-member-row__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.asa-community-member-row__badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.asa-community-member-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+@media (max-width: 28rem) {
+  .asa-community-member-row__actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
 }

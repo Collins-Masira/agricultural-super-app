@@ -1,7 +1,3 @@
-/* ==========================================================================
-   Posts feature — styles
-   ========================================================================== */
-
 .asa-post-card {
   overflow: hidden;
 }
@@ -21,6 +17,23 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+}
+
+.asa-post-card__menu {
+  margin-left: auto;
+}
+
+.asa-post-menu__error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.asa-post-menu__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .asa-post-card__author {
@@ -103,9 +116,91 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--color-text-muted);
+  position: relative;
 }
 
-/* ---- Post detail ---- */
+.asa-post__action--active {
+  color: var(--color-primary);
+}
+
+.asa-post-card__announcement {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 var(--space-4) var(--space-2);
+  padding: 0.15rem var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-share-feedback {
+  position: absolute;
+  top: -1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.15rem var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.asa-post-card__repost-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 var(--space-4) var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.asa-post-card__reposted {
+  margin: 0 var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.asa-post-card__reposted .asa-post-card__title,
+.asa-post-card__reposted .asa-post-card__excerpt {
+  margin-left: var(--space-3);
+  margin-right: var(--space-3);
+}
+
+.asa-post-card__reposted .asa-post-card__images {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.asa-quick-composer {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.asa-quick-composer .asa-field {
+  margin-bottom: var(--space-2);
+}
+
+.asa-quick-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.asa-quick-composer__announcement {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .asa-post-detail__title {
   margin: var(--space-4) var(--space-4) var(--space-3);
   font-size: var(--font-size-xl);
@@ -114,7 +209,6 @@
 .asa-post-detail__content {
   margin: 0 var(--space-4) var(--space-4);
   font-size: var(--font-size-md);
-  white-space: pre-line;
 }
 
 .asa-post-detail__images {
@@ -137,7 +231,6 @@
   font-size: var(--font-size-sm);
 }
 
-/* ---- Comments ---- */
 .asa-comments {
   margin-top: var(--space-5);
   border-top: 1px solid var(--color-border);
@@ -152,6 +245,16 @@
 .asa-comments__empty {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.asa-comments__closed {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface-muted);
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
 }
 
 .asa-comments__list {
@@ -188,6 +291,33 @@
 .asa-comment__content {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+.asa-composer__content {
+  margin-bottom: var(--space-4);
+}
+
+.asa-composer__tabs {
+  margin-bottom: var(--space-2);
+}
+
+.asa-composer-toolbar {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.asa-composer-toolbar .asa-btn {
+  min-width: 2.25rem;
+}
+
+.asa-composer__preview {
+  min-height: 8rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
 }
 
 @media (min-width: 40rem) {

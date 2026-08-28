@@ -18,6 +18,37 @@ def upload_image():
     only ever produces a URL, it doesn't attach anything to anything).
 
     Body: multipart/form-data with a single file field named "image".
+    ---
+    tags:
+      - Uploads
+    security:
+      - BearerAuth: []
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: image
+        type: file
+        required: true
+        description: JPEG, PNG, or WebP. Max 5MB by default (MAX_CONTENT_LENGTH).
+    responses:
+      201:
+        description: Image stored.
+        schema:
+          type: object
+          properties:
+            url:
+              type: string
+            filename:
+              type: string
+      422:
+        description: Missing file, or not a genuine, safe image.
+        schema:
+          $ref: '#/definitions/Error'
+      413:
+        description: File exceeds MAX_CONTENT_LENGTH.
+        schema:
+          $ref: '#/definitions/Error'
     """
     file_storage = request.files.get("image")
     filename = upload_service.save_uploaded_image(file_storage, current_app.config["UPLOAD_FOLDER"])
@@ -34,5 +65,22 @@ def serve_upload(filename):
     images, profile images). send_from_directory rejects any filename
     containing '..' or an absolute path itself, so this is safe against
     path traversal regardless of what's in the URL.
+    ---
+    tags:
+      - Uploads
+    parameters:
+      - in: path
+        name: filename
+        type: string
+        required: true
+    produces:
+      - image/jpeg
+      - image/png
+      - image/webp
+    responses:
+      200:
+        description: The image file.
+      404:
+        description: File not found.
     """
     return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
