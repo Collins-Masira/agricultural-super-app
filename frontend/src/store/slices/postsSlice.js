@@ -22,6 +22,8 @@ const initialState = {
   reactionLoadingPostId: null,
   saveLoadingPostId: null,
   repostLoadingPostId: null,
+  updateLoadingPostId: null,
+  updateError: null,
   deleteLoadingPostId: null,
   deleteError: null,
 }
@@ -196,6 +198,17 @@ export const toggleRepost = createAsyncThunk(
       return { rootId, repostedByMe: !wasReposted, createdRepost, currentUserId }
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to update repost.')
+    }
+  },
+)
+
+export const updatePost = createAsyncThunk(
+  'posts/updatePost',
+  async ({ postId, title, content }, { rejectWithValue }) => {
+    try {
+      return await postsService.updatePost(postId, { title, content })
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to update post.')
     }
   },
 )
@@ -411,6 +424,22 @@ const postsSlice = createSlice({
       })
       .addCase(toggleRepost.rejected, (state) => {
         state.repostLoadingPostId = null
+      })
+      .addCase(updatePost.pending, (state, action) => {
+        state.updateLoadingPostId = action.meta.arg.postId
+        state.updateError = null
+      })
+      .addCase(updatePost.fulfilled, (state, action) => {
+        forEachMatchingPost(state, action.payload.id, (post) => {
+          post.title = action.payload.title
+          post.content = action.payload.content
+          post.updatedAt = action.payload.updatedAt
+        })
+        state.updateLoadingPostId = null
+      })
+      .addCase(updatePost.rejected, (state, action) => {
+        state.updateLoadingPostId = null
+        state.updateError = action.payload
       })
       .addCase(deletePost.pending, (state, action) => {
         state.deleteLoadingPostId = action.meta.arg

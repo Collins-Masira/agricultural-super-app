@@ -60,6 +60,15 @@ export const postsService = {
     return normalizeComment(comment)
   },
 
+  async updatePost(postId, input) {
+    if (env.useMocks) return mockPosts.updatePost?.(postId, input)
+    const post = await httpClient.put(`/posts/${postId}`, {
+      title: input.title,
+      content: input.content,
+    })
+    return normalizePost(post)
+  },
+
   async deletePost(postId) {
     if (env.useMocks) return
     return httpClient.delete(`/posts/${postId}`)

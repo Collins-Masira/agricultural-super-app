@@ -12,12 +12,15 @@ import { PostMenu } from './PostMenu'
 vi.mock('@/services', () => ({
   postsService: {
     deletePost: vi.fn(),
+    updatePost: vi.fn(),
   },
 }))
 
 function postFixture(overrides = {}) {
   return {
     id: 1,
+    title: 'Original title',
+    content: 'Original content',
     author: { user: { id: 5, username: 'amina', role: 'farmer' }, profile: {} },
     communityId: null,
     ...overrides,
@@ -50,6 +53,8 @@ function renderMenu({ post, currentUser, community = null, onDeleted } = {}) {
         reactionLoadingPostId: null,
         saveLoadingPostId: null,
         repostLoadingPostId: null,
+        updateLoadingPostId: null,
+        updateError: null,
         deleteLoadingPostId: null,
         deleteError: null,
       },
@@ -148,5 +153,55 @@ describe('PostMenu', () => {
 
     expect(await screen.findByText('Server error.')).toBeInTheDocument()
     expect(store.getState().posts.feed).toHaveLength(1)
+  })
+
+  it('shows an edit dialog pre-filled with the post when Edit is chosen', async () => {
+    const user = userEvent.setup()
+    renderMenu({ post: postFixture(), currentUser: owner })
+
+    await user.click(screen.getByRole('button', { name: /post options/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
+
+    expect(screen.getByText('Edit post')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Original title')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Original content')).toBeInTheDocument()
+  })
+
+  it('saves edits and updates the post in the feed', async () => {
+    const { postsService } = await import('@/services')
+    postsService.updatePost.mockResolvedValue({
+      id: 1,
+      title: 'Updated title',
+      content: 'Updated content',
+      updatedAt: '2026-08-28T00:00:00Z',
+    })
+    const user = userEvent.setup()
+    const store = renderMenu({ post: postFixture(), currentUser: owner })
+
+    await user.click(screen.getByRole('button', { name: /post options/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
+    await user.clear(screen.getByLabelText(/title/i))
+    await user.type(screen.getByLabelText(/title/i), 'Updated title')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(store.getState().posts.feed[0].title).toBe('Updated title'))
+    expect(postsService.updatePost).toHaveBeenCalledWith(1, {
+      title: 'Updated title',
+      content: 'Original content',
+    })
+    expect(screen.queryByText('Edit post')).not.toBeInTheDocument()
+  })
+
+  it('does not show Edit for an unauthorized user, even a community admin who can delete', async () => {
+    const user = userEvent.setup()
+    renderMenu({
+      post: postFixture({ communityId: 3 }),
+      currentUser: otherUser,
+      community: { id: 3, myRole: 'admin' },
+    })
+
+    await user.click(screen.getByRole('button', { name: /post options/i }))
+    expect(screen.queryByRole('menuitem', { name: /edit/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /delete/i })).toBeInTheDocument()
   })
 })
