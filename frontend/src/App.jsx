@@ -8,6 +8,7 @@ import { AdminLayout } from '@/features/admin/AdminLayout'
 import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage'
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage'
 import { AdminContentPage } from '@/features/admin/pages/AdminContentPage'
+import { AdminReportsPage } from '@/features/admin/pages/AdminReportsPage'
 import { AdminCommunitiesPage } from '@/features/admin/pages/AdminCommunitiesPage'
 import { UnauthorizedPage } from '@/features/misc/UnauthorizedPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -19,6 +20,8 @@ import { CreatePostPage } from '@/features/posts/pages/CreatePostPage'
 import { PostDetailPage } from '@/features/posts/pages/PostDetailPage'
 import { ExpertsPage } from '@/features/experts/pages/ExpertsPage'
 import { ExpertProfilePage } from '@/features/experts/pages/ExpertProfilePage'
+import { SearchPage } from '@/features/search/pages/SearchPage'
+import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { EditProfilePage } from '@/features/profile/pages/EditProfilePage'
 import { ChangePasswordPage } from '@/features/profile/pages/ChangePasswordPage'
@@ -49,6 +52,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <FeedPage /> },
           { path: 'create', element: <CreatePostPage /> },
+          { path: 'search', element: <SearchPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
           { path: 'posts/:postId', element: <PostDetailPage /> },
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'experts/:userId', element: <ExpertProfilePage /> },
@@ -76,6 +81,7 @@ const router = createBrowserRouter([
           { index: true, element: <AdminDashboardPage /> },
           { path: 'users', element: <AdminUsersPage /> },
           { path: 'posts', element: <AdminContentPage /> },
+          { path: 'reports', element: <AdminReportsPage /> },
           { path: 'communities', element: <AdminCommunitiesPage /> },
         ],
       },

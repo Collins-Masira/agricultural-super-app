@@ -40,6 +40,7 @@ export function ExpertProfilePage() {
     <>
       <ProfileHero
         profile={expert}
+        postsCount={posts.length}
         followersCount={followersCount}
         actions={
           expert.user.id === user?.user.id ? null : (

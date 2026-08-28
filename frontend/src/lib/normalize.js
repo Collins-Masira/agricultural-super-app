@@ -173,3 +173,16 @@ export function normalizeAIConversation(c) {
     messages: (c.messages ?? []).map(normalizeAIMessage),
   }
 }
+
+export function normalizeNotification(n) {
+  return {
+    id: n.id,
+    type: n.type,
+    isRead: n.is_read,
+    createdAt: n.created_at,
+    postId: n.post_id ?? null,
+    commentId: n.comment_id ?? null,
+    postTitle: n.post_title ?? null,
+    actor: toUserProfile(n.actor),
+  }
+}

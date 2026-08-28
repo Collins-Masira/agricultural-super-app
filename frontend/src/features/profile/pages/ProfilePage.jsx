@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Button, EmptyState, LoadingState, Tabs } from '@/components/ui'
 import { useAuth } from '@/features/auth/AuthContext'
-import { fetchFollowersCount } from '@/store/slices/expertsSlice'
+import { fetchFollowersCount, fetchMyFollowing } from '@/store/slices/expertsSlice'
 import { fetchSavedPosts, fetchUserPosts } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { PostCard } from '@/features/posts/components/PostCard'
+import { FollowingListModal } from '../components/FollowingListModal'
 import { ProfileHero } from '../components/ProfileHero'
 import '../profile.css'
 
@@ -17,17 +18,20 @@ export function ProfilePage() {
   const { user } = useAuth()
   const dispatch = useAppDispatch()
   const [tab, setTab] = useState('posts')
+  const [followingModalOpen, setFollowingModalOpen] = useState(false)
 
   const posts = useAppSelector((state) => state.posts.userPosts)
   const postsStatus = useAppSelector((state) => state.posts.userPostsStatus)
   const savedPosts = useAppSelector((state) => state.posts.savedPosts)
   const savedPostsStatus = useAppSelector((state) => state.posts.savedPostsStatus)
   const followersCount = useAppSelector((state) => state.experts.followersCounts[user?.user.id] ?? 0)
+  const followingIds = useAppSelector((state) => state.experts.followingIds)
 
   useEffect(() => {
     if (user) {
       dispatch(fetchUserPosts(user.user.id))
       dispatch(fetchFollowersCount(user.user.id))
+      dispatch(fetchMyFollowing())
     }
   }, [dispatch, user])
 
@@ -42,7 +46,10 @@ export function ProfilePage() {
     <>
       <ProfileHero
         profile={user}
+        postsCount={posts.length}
         followersCount={followersCount}
+        followingCount={followingIds.length}
+        onFollowingClick={() => setFollowingModalOpen(true)}
         actions={
           <>
             <Button to="/profile/edit">Edit profile</Button>
@@ -51,6 +58,12 @@ export function ProfilePage() {
             </Button>
           </>
         }
+      />
+
+      <FollowingListModal
+        open={followingModalOpen}
+        onClose={() => setFollowingModalOpen(false)}
+        userIds={followingIds}
       />
 
       <Tabs items={TABS} value={tab} onChange={setTab} className="asa-profile-tabs" />
