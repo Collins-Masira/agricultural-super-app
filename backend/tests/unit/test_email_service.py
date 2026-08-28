@@ -92,3 +92,37 @@ class TestPasswordResetEmail:
         )
         assert "<html>" in html
         assert "</html>" in html
+
+
+class TestNewSignupEmail:
+    def test_includes_username_email_and_role(self):
+        html, text = email_service.new_signup_email(
+            username="amina", email="amina@example.com", role="farmer", manage_url="http://x/admin/users"
+        )
+        for value in ("amina", "amina@example.com", "farmer"):
+            assert value in html
+            assert value in text
+
+    def test_includes_manage_url(self):
+        html, text = email_service.new_signup_email(
+            username="amina",
+            email="amina@example.com",
+            role="farmer",
+            manage_url="http://localhost:5173/admin/users?search=amina",
+        )
+        assert "http://localhost:5173/admin/users?search=amina" in html
+        assert "http://localhost:5173/admin/users?search=amina" in text
+
+    def test_includes_app_name(self):
+        html, text = email_service.new_signup_email(
+            username="amina", email="amina@example.com", role="farmer", manage_url="http://x/admin/users"
+        )
+        assert "AgriConnect" in html
+        assert "AgriConnect" in text
+
+    def test_html_is_a_complete_document(self):
+        html, _text = email_service.new_signup_email(
+            username="amina", email="amina@example.com", role="farmer", manage_url="http://x/admin/users"
+        )
+        assert "<html>" in html
+        assert "</html>" in html
