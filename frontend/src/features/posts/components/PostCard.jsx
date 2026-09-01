@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, PostContent, ReactionPicker, RepostButton, SaveButton, ShareButton, VerifiedBadge } from '@/components/ui'
 import { CommentIcon, RepeatIcon } from '@/components/icons'
 import { formatRelativeTime } from '@/lib/format'
-import { removeReaction, setReaction, toggleRepost, toggleSave } from '@/store/slices/postsSlice'
+import { addComment, removeReaction, setReaction, toggleRepost, toggleSave } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { PostMenu } from './PostMenu'
+import { PostMedia } from './PostMedia'
 
 function displayName(actor) {
   return actor.profile.firstName && actor.profile.lastName
@@ -12,21 +14,60 @@ function displayName(actor) {
     : actor.user.username
 }
 
-function PostBody({ post }) {
+function PostBody({ post, onDoubleTapMedia }) {
   return (
     <>
       <h2 className="asa-post-card__title">
         <Link to={`/posts/${post.id}`}>{post.title}</Link>
       </h2>
       <PostContent content={post.content} className="asa-post-card__excerpt" />
-      {post.images.length > 0 && (
-        <div className={`asa-post-card__images asa-post-card__images--${post.images.length}`}>
-          {post.images.map((image) => (
-            <img key={image.id} src={image.imageUrl} alt="" loading="lazy" />
-          ))}
-        </div>
-      )}
+      <PostMedia images={post.images} videoUrl={post.videoUrl} onDoubleTap={onDoubleTapMedia} />
     </>
+  )
+}
+
+function InlineAddComment({ postId, commentsOpen }) {
+  const dispatch = useAppDispatch()
+  const [value, setValue] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  if (commentsOpen === false) return null
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    const content = value.trim()
+    if (!content || submitting) return
+    setSubmitting(true)
+    try {
+      await dispatch(addComment({ postId, content })).unwrap()
+      setValue('')
+    } catch {
+      // Inline errors stay silent here -- the full thread on the post
+      // detail page (CommentSection) surfaces failures explicitly.
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form className="asa-post-card__add-comment" onSubmit={handleSubmit}>
+      <input
+        type="text"
+        className="asa-post-card__add-comment-input"
+        placeholder="Add a comment…"
+        aria-label="Add a comment"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        disabled={submitting}
+      />
+      <button
+        type="submit"
+        className="asa-post-card__add-comment-submit"
+        disabled={!value.trim() || submitting}
+      >
+        Post
+      </button>
+    </form>
   )
 }
 
@@ -39,6 +80,11 @@ export function PostCard({ post }) {
 
   const authorName = displayName(post.author)
   const displayedPost = post.originalPost ?? post
+  const commentCount = post.comments.length
+
+  function handleDoubleTapLike() {
+    if (!post.myReaction) dispatch(setReaction({ postId: post.id, reactionType: 'love' }))
+  }
 
   return (
     <article className="asa-post-card asa-card">
@@ -50,8 +96,12 @@ export function PostCard({ post }) {
               {authorName}
             </Link>
             <VerifiedBadge profile={post.author.profile} />
+            <Badge variant="default">{post.author.user.role}</Badge>
           </div>
-          <span className="asa-post-card__time">{formatRelativeTime(post.createdAt)}</span>
+          <span className="asa-post-card__time">
+            {post.author.profile.location ? `${post.author.profile.location} · ` : ''}
+            {formatRelativeTime(post.createdAt)}
+          </span>
         </div>
         <div className="asa-post-card__menu">
           <PostMenu post={post} />
@@ -71,13 +121,14 @@ export function PostCard({ post }) {
       {displayedPost.isAnnouncement && (
         <span className="asa-post-card__announcement">📢 Community Announcement</span>
       )}
+      {displayedPost.videoUrl && <span className="asa-post-card__reel-badge">🎬 Reel</span>}
 
       {post.originalPost ? (
         <div className="asa-post-card__reposted">
-          <PostBody post={post.originalPost} />
+          <PostBody post={post.originalPost} onDoubleTapMedia={handleDoubleTapLike} />
         </div>
       ) : (
-        <PostBody post={post} />
+        <PostBody post={post} onDoubleTapMedia={handleDoubleTapLike} />
       )}
 
       <footer className="asa-post-card__footer">
@@ -104,10 +155,23 @@ export function PostCard({ post }) {
           loading={repostLoading}
           onToggle={() => dispatch(toggleRepost(post.id))}
         />
-        <SaveButton saved={post.savedByMe} loading={saveLoading} onToggle={() => dispatch(toggleSave(post.id))} />
         <ShareButton postId={post.id} />
-        <Badge variant="default">{post.author.user.role}</Badge>
+        <SaveButton saved={post.savedByMe} loading={saveLoading} onToggle={() => dispatch(toggleSave(post.id))} />
       </footer>
+
+      {post.likeCount > 0 && (
+        <p className="asa-post-card__likes">
+          {post.likeCount} likes{post.videoUrl ? ` · ${post.viewCount} views` : ''}
+        </p>
+      )}
+
+      {commentCount > 0 && (
+        <Link to={`/posts/${post.id}#comments`} className="asa-post-card__view-comments">
+          View all {commentCount} comment{commentCount === 1 ? '' : 's'}
+        </Link>
+      )}
+
+      <InlineAddComment postId={post.id} commentsOpen={post.commentsOpen} />
     </article>
   )
 }

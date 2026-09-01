@@ -37,33 +37,6 @@
   color: var(--color-primary);
 }
 
-.asa-header__nav {
-  display: none;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.asa-header__link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-.asa-header__link:hover {
-  background-color: var(--color-surface-muted);
-  text-decoration: none;
-}
-.asa-header__link--active {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
 .asa-header__actions {
   display: flex;
   align-items: center;
@@ -106,8 +79,20 @@
   line-height: 1;
 }
 
-.asa-main {
+.asa-shell__body {
   flex: 1;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.asa-sidebar {
+  display: none;
+}
+
+.asa-main {
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   max-width: var(--container-max);
   margin: 0 auto;
@@ -151,9 +136,117 @@
 .asa-header__user {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+}
+
+.asa-header__actions .asa-dropdown > .asa-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: 0;
+  padding: 0;
   border-radius: var(--radius-full);
+}
+
+.asa-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.asa-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.asa-sidebar__link:hover {
+  background-color: var(--color-surface-muted);
+  text-decoration: none;
+}
+.asa-sidebar__link--active {
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-sidebar__link--button {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.asa-bottom-nav__link--create-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asa-bottom-nav__create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: -1.25rem;
+  border: 3px solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+.asa-bottom-nav__create:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.asa-create-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.asa-create-menu__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.asa-create-menu__option:hover {
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-primary);
+}
+
+.asa-create-menu__icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.asa-create-menu__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.asa-create-menu__text strong {
+  font-size: var(--font-size-md);
+}
+
+.asa-create-menu__text small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 @media (min-width: 40rem) {
@@ -161,8 +254,18 @@
     padding-bottom: var(--space-7);
   }
 
-  .asa-header__nav {
+  .asa-sidebar {
     display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 15.5rem;
+    align-self: flex-start;
+    position: sticky;
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-3);
+    border-right: 1px solid var(--color-border);
   }
 
   .asa-bottom-nav {

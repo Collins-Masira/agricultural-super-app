@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
-import { formatRelativeTime } from '@/lib/format'
+import { formatRelativeTime, groupByDay } from '@/lib/format'
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -18,8 +18,10 @@ function actorName(actor) {
 
 function notificationText(notification) {
   const name = actorName(notification.actor)
-  if (notification.type === 'post_like') return `${name} liked your post`
-  if (notification.type === 'post_comment') return `${name} commented on your post`
+  const target = notification.isReel ? 'Reel' : 'post'
+  if (notification.type === 'post_like') return `${name} liked your ${target}`
+  if (notification.type === 'post_comment') return `${name} commented on your ${target}`
+  if (notification.type === 'comment_reply') return `${name} replied to your comment`
   if (notification.type === 'follow') return `${name} started following you`
   return `${name} interacted with your content`
 }
@@ -72,34 +74,38 @@ export function NotificationsPage() {
         />
       )}
 
-      {status === 'ready' && (
-        <ul className="asa-notifications__list">
-          {notifications.map((notification) => (
-            <li key={notification.id}>
-              <button
-                type="button"
-                className={`asa-notifications__item ${notification.isRead ? '' : 'asa-notifications__item--unread'}`}
-                onClick={() => handleOpen(notification)}
-              >
-                <Avatar
-                  imageUrl={notification.actor.profile.profileImageUrl}
-                  name={actorName(notification.actor)}
-                  username={notification.actor.user.username}
-                  size="md"
-                />
-                <span className="asa-notifications__body">
-                  <span className="asa-notifications__text">
-                    {notificationText(notification)}
-                    {notification.postTitle && <> — <em>{notification.postTitle}</em></>}
-                  </span>
-                  <span className="asa-notifications__time">{formatRelativeTime(notification.createdAt)}</span>
-                </span>
-                {!notification.isRead && <span className="asa-notifications__dot" aria-hidden="true" />}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {status === 'ready' &&
+        groupByDay(notifications, 'createdAt').map(([label, items]) => (
+          <section key={label} className="asa-notifications__group">
+            <h2 className="asa-notifications__group-title">{label}</h2>
+            <ul className="asa-notifications__list">
+              {items.map((notification) => (
+                <li key={notification.id}>
+                  <button
+                    type="button"
+                    className={`asa-notifications__item ${notification.isRead ? '' : 'asa-notifications__item--unread'}`}
+                    onClick={() => handleOpen(notification)}
+                  >
+                    <Avatar
+                      imageUrl={notification.actor.profile.profileImageUrl}
+                      name={actorName(notification.actor)}
+                      username={notification.actor.user.username}
+                      size="md"
+                    />
+                    <span className="asa-notifications__body">
+                      <span className="asa-notifications__text">
+                        {notificationText(notification)}
+                        {notification.postTitle && <> — <em>{notification.postTitle}</em></>}
+                      </span>
+                      <span className="asa-notifications__time">{formatRelativeTime(notification.createdAt)}</span>
+                    </span>
+                    {!notification.isRead && <span className="asa-notifications__dot" aria-hidden="true" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
     </>
   )
 }

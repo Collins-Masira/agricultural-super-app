@@ -57,6 +57,54 @@ def upload_image():
     return jsonify({"url": url, "filename": filename}), 201
 
 
+@uploads_bp.post("/video")
+@jwt_required
+def upload_video():
+    """
+    Auth required -- uploads a video for a Reel (a post with video_url
+    set). Same posture as image upload: this only ever produces a URL,
+    ownership of where it gets attached is enforced by the post endpoints.
+
+    Body: multipart/form-data with a single file field named "video".
+    ---
+    tags:
+      - Uploads
+    security:
+      - BearerAuth: []
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: video
+        type: file
+        required: true
+        description: MP4, MOV, or WebM. Max 50MB.
+    responses:
+      201:
+        description: Video stored.
+        schema:
+          type: object
+          properties:
+            url:
+              type: string
+            filename:
+              type: string
+      422:
+        description: Missing file, or not a genuine, supported video.
+        schema:
+          $ref: '#/definitions/Error'
+      413:
+        description: File exceeds MAX_CONTENT_LENGTH.
+        schema:
+          $ref: '#/definitions/Error'
+    """
+    file_storage = request.files.get("video")
+    filename = upload_service.save_uploaded_video(file_storage, current_app.config["UPLOAD_FOLDER"])
+
+    url = request.host_url.rstrip("/") + f"/api/uploads/{filename}"
+    return jsonify({"url": url, "filename": filename}), 201
+
+
 @uploads_bp.get("/<path:filename>")
 def serve_upload(filename):
     """

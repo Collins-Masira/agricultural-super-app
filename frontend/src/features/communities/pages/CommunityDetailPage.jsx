@@ -12,7 +12,8 @@ import {
 import { fetchCommunityPosts } from '@/store/slices/postsSlice'
 import { PostCard } from '@/features/posts/components/PostCard'
 import { QuickComposer } from '@/features/posts/components/QuickComposer'
-import { formatDate } from '@/lib/format'
+import { UsersIcon } from '@/components/icons'
+import { formatCount, formatDate } from '@/lib/format'
 import { canPostInCommunity } from '../permissions'
 import { CommunitySettingsModal } from '../components/CommunitySettingsModal'
 import '../communities.css'
@@ -84,15 +85,22 @@ export function CommunityDetailPage() {
       <section className="asa-community-hero">
         {community.imageUrl && <img className="asa-community-hero__image" src={community.imageUrl} alt="" />}
         <div className="asa-community-hero__header">
-          <div>
-            <h1 className="asa-community-hero__name">
-              <span>{community.name}</span>
-              {isAdmin && <Badge variant="default">Admin</Badge>}
-            </h1>
-            <p className="asa-community-hero__meta">
-              {community.members.length} member{community.members.length === 1 ? '' : 's'} · created by{' '}
-              {community.creator?.profile.firstName || community.creator?.user.username}
-            </p>
+          <div className="asa-community-hero__identity">
+            {!community.imageUrl && (
+              <span className="asa-community-hero__avatar asa-community-hero__avatar--placeholder" aria-hidden="true">
+                <UsersIcon width={28} height={28} />
+              </span>
+            )}
+            <div>
+              <h1 className="asa-community-hero__name">
+                <span>{community.name}</span>
+                {isAdmin && <Badge variant="default">Admin</Badge>}
+              </h1>
+              <p className="asa-community-hero__meta">
+                {formatCount(community.members.length)} member{community.members.length === 1 ? '' : 's'} · created by{' '}
+                {community.creator?.profile.firstName || community.creator?.user.username}
+              </p>
+            </div>
           </div>
           <div className="asa-community-hero__actions">
             {isAdmin && (

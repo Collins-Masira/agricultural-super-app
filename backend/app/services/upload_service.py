@@ -39,6 +39,31 @@ ALLOWED_FORMATS = {
 }
 
 
+MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
+
+# (extension, expected magic-byte check). There's no video-processing
+# dependency in this project (no ffmpeg/opencv), so unlike images this
+# can't be decoded and re-encoded to prove it's genuine -- this is a
+# narrower, documented trade-off: a lightweight structural sniff of each
+# container format's own header, not a full parse.
+ALLOWED_VIDEO_TYPES = {
+    "video/mp4": "mp4",
+    "video/quicktime": "mov",
+    "video/webm": "webm",
+}
+
+
+def _looks_like_mp4(header):
+    # An MP4/MOV file is a sequence of boxes; the first box is usually
+    # "ftyp" starting at byte 4 (bytes 0-3 are the box size).
+    return header[4:8] == b"ftyp"
+
+
+def _looks_like_webm(header):
+    # WebM/Matroska files start with the EBML magic number.
+    return header[:4] == b"\x1a\x45\xdf\xa3"
+
+
 def _ensure_upload_folder(upload_folder):
     os.makedirs(upload_folder, exist_ok=True)
 
@@ -103,5 +128,53 @@ def save_uploaded_image(file_storage, upload_folder):
         save_kwargs["quality"] = 85
         save_kwargs["optimize"] = True
     image.save(destination, **save_kwargs)
+
+    return filename
+
+
+def save_uploaded_video(file_storage, upload_folder):
+    """
+    Validate and persist an uploaded video file (for Reels/FarmClips).
+
+    Same untrusted-input posture as save_uploaded_image: the declared
+    Content-Type and filename extension are both attacker-controlled, so
+    they're only used to pick which magic-byte check to run, never
+    trusted on their own. The file is stored as-is (no re-encode -- that
+    would need ffmpeg, which this project doesn't depend on).
+    """
+    if file_storage is None or not file_storage.filename:
+        raise ValidationAPIError("No video file was provided.")
+
+    raw_bytes = file_storage.read()
+    if not raw_bytes:
+        raise ValidationAPIError("The uploaded file is empty.")
+    if len(raw_bytes) > MAX_VIDEO_SIZE_BYTES:
+        raise ValidationAPIError(
+            f"Video is too large. Maximum size is {MAX_VIDEO_SIZE_BYTES // (1024 * 1024)}MB."
+        )
+
+    content_type = (file_storage.mimetype or "").lower()
+    extension = ALLOWED_VIDEO_TYPES.get(content_type)
+    if extension is None:
+        raise ValidationAPIError(
+            "Unsupported video type. Supported formats: MP4, MOV, WebM."
+        )
+
+    header = raw_bytes[:16]
+    is_valid = (
+        (extension in ("mp4", "mov") and _looks_like_mp4(header))
+        or (extension == "webm" and _looks_like_webm(header))
+    )
+    if not is_valid:
+        raise ValidationAPIError(
+            "This file does not look like a genuine video. "
+            "Supported formats: MP4, MOV, WebM."
+        )
+
+    _ensure_upload_folder(upload_folder)
+    filename = f"{uuid.uuid4().hex}.{extension}"
+    destination = os.path.join(upload_folder, filename)
+    with open(destination, "wb") as out:
+        out.write(raw_bytes)
 
     return filename

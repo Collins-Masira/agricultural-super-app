@@ -43,6 +43,10 @@ def list_posts():
         type: integer
         default: 20
         description: Capped at 100.
+      - in: query
+        name: has_video
+        type: boolean
+        description: When "true", only returns Reels (posts with a video attached).
     responses:
       200:
         description: A page of posts.
@@ -53,7 +57,8 @@ def list_posts():
     """
     page = request.args.get("page", default=1, type=int)
     per_page = request.args.get("per_page", default=20, type=int)
-    posts = post_service.list_posts(page=page, per_page=per_page)
+    has_video = request.args.get("has_video") == "true"
+    posts = post_service.list_posts(page=page, per_page=per_page, has_video=has_video)
     return jsonify(_dump_posts_for_viewer(posts, many=True)), 200
 
 
@@ -400,6 +405,10 @@ def add_comment(post_id):
           properties:
             content:
               type: string
+            parent_comment_id:
+              type: integer
+              x-nullable: true
+              description: Set to reply to another comment on the same post.
     responses:
       201:
         description: Comment created.
@@ -412,7 +421,7 @@ def add_comment(post_id):
         schema:
           $ref: '#/definitions/Error'
       404:
-        description: Post not found.
+        description: Post (or parent comment) not found.
         schema:
           $ref: '#/definitions/Error'
       422:
@@ -424,8 +433,41 @@ def add_comment(post_id):
     content = payload.get("content")
     if not content:
         raise ValidationAPIError("content is required.")
-    comment = post_service.add_comment(get_current_user(), post_id, content)
+    parent_comment_id = payload.get("parent_comment_id")
+    comment = post_service.add_comment(get_current_user(), post_id, content, parent_comment_id)
     return jsonify(comment_schema.dump(comment)), 201
+
+
+@posts_bp.post("/<int:post_id>/view")
+@optional_jwt
+def record_view(post_id):
+    """
+    Increment a post's view count. Not authenticated-user-specific (no
+    per-viewer dedup) -- a lightweight counter, matching how view counts
+    work on most short-form video feeds.
+    ---
+    tags:
+      - Posts
+    parameters:
+      - in: path
+        name: post_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Updated view count.
+        schema:
+          type: object
+          properties:
+            view_count:
+              type: integer
+      404:
+        description: Post not found.
+        schema:
+          $ref: '#/definitions/Error'
+    """
+    post = post_service.increment_view_count(post_id)
+    return jsonify({"view_count": post.view_count}), 200
 
 
 @comments_bp.put("/<int:comment_id>")

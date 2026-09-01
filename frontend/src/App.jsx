@@ -17,10 +17,15 @@ import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { FeedPage } from '@/features/posts/pages/FeedPage'
 import { CreatePostPage } from '@/features/posts/pages/CreatePostPage'
+import { CreateReelPage } from '@/features/posts/pages/CreateReelPage'
+import { CreateStoryPage } from '@/features/stories/pages/CreateStoryPage'
 import { PostDetailPage } from '@/features/posts/pages/PostDetailPage'
+import { SavedPostsPage } from '@/features/posts/pages/SavedPostsPage'
+import { FarmClipsPage } from '@/features/farmclips/pages/FarmClipsPage'
 import { ExpertsPage } from '@/features/experts/pages/ExpertsPage'
 import { ExpertProfilePage } from '@/features/experts/pages/ExpertProfilePage'
 import { SearchPage } from '@/features/search/pages/SearchPage'
+import { ExplorePage } from '@/features/explore/pages/ExplorePage'
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { EditProfilePage } from '@/features/profile/pages/EditProfilePage'
@@ -52,9 +57,14 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <FeedPage /> },
           { path: 'create', element: <CreatePostPage /> },
+          { path: 'create/story', element: <CreateStoryPage /> },
+          { path: 'create/reel', element: <CreateReelPage /> },
+          { path: 'explore', element: <ExplorePage /> },
           { path: 'search', element: <SearchPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
           { path: 'posts/:postId', element: <PostDetailPage /> },
+          { path: 'saved', element: <SavedPostsPage /> },
+          { path: 'farmclips', element: <FarmClipsPage /> },
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'experts/:userId', element: <ExpertProfilePage /> },
           { path: 'communities', element: <CommunitiesPage /> },

@@ -13,6 +13,14 @@ class TestCreatePost:
         assert post.user_id == amina.id
         assert post.title == "Maize tips"
 
+    def test_creates_a_reel_when_video_url_given(self, create_user):
+        amina = create_user(username="amina")
+        post = post_service.create_post(
+            amina, {"title": "Fall armyworm control", "content": "c", "video_url": "https://x/clip.mp4"}
+        )
+        assert post.video_url == "https://x/clip.mp4"
+        assert post.view_count == 0
+
     def test_creates_nested_images(self, create_user):
         amina = create_user(username="amina")
         post = post_service.create_post(
@@ -64,6 +72,43 @@ class TestListPosts:
         assert [p.id for p in page_one] == newest_first_ids[0:2]
         assert [p.id for p in page_two] == newest_first_ids[2:4]
         assert set(p.id for p in page_one).isdisjoint(p.id for p in page_two)
+
+
+class TestListPostsHasVideo:
+    def test_filters_to_only_posts_with_video(self, create_user):
+        amina = create_user(username="amina")
+        post_service.create_post(amina, {"title": "Plain", "content": "c"})
+        reel = post_service.create_post(
+            amina, {"title": "Reel", "content": "c", "video_url": "https://x/clip.mp4"}
+        )
+
+        posts = post_service.list_posts(has_video=True)
+
+        assert [p.id for p in posts] == [reel.id]
+
+    def test_false_returns_everything(self, create_user):
+        amina = create_user(username="amina")
+        post_service.create_post(amina, {"title": "Plain", "content": "c"})
+        post_service.create_post(
+            amina, {"title": "Reel", "content": "c", "video_url": "https://x/clip.mp4"}
+        )
+
+        assert len(post_service.list_posts(has_video=False)) == 2
+
+
+class TestIncrementViewCount:
+    def test_increments_from_zero(self, create_user):
+        amina = create_user(username="amina")
+        post = post_service.create_post(amina, {"title": "T", "content": "c"})
+
+        post_service.increment_view_count(post.id)
+        post_service.increment_view_count(post.id)
+
+        assert post_service.get_post_or_404(post.id).view_count == 2
+
+    def test_raises_not_found_for_missing_post(self):
+        with pytest.raises(NotFoundError):
+            post_service.increment_view_count(999999)
 
 
 class TestListPostsByUser:
@@ -300,6 +345,35 @@ class TestComments:
 
         updated = post_service.update_comment(amina, comment.id, "Edited")
         assert updated.content == "Edited"
+
+    def test_reply_sets_parent_comment_id(self, create_user):
+        amina = create_user(username="amina")
+        brian = create_user(username="brian")
+        post = post_service.create_post(amina, {"title": "T", "content": "c"})
+        parent = post_service.add_comment(brian, post.id, "Original")
+
+        reply = post_service.add_comment(amina, post.id, "Thanks!", parent_comment_id=parent.id)
+
+        assert reply.parent_comment_id == parent.id
+
+    def test_reply_to_comment_on_different_post_raises_not_found(self, create_user):
+        amina = create_user(username="amina")
+        post_one = post_service.create_post(amina, {"title": "One", "content": "c"})
+        post_two = post_service.create_post(amina, {"title": "Two", "content": "c"})
+        parent = post_service.add_comment(amina, post_one.id, "Original")
+
+        with pytest.raises(NotFoundError):
+            post_service.add_comment(amina, post_two.id, "Wrong post", parent_comment_id=parent.id)
+
+    def test_deleting_parent_comment_deletes_its_replies(self, create_user):
+        amina = create_user(username="amina")
+        post = post_service.create_post(amina, {"title": "T", "content": "c"})
+        parent = post_service.add_comment(amina, post.id, "Original")
+        reply = post_service.add_comment(amina, post.id, "Reply", parent_comment_id=parent.id)
+
+        post_service.delete_comment(amina, parent.id)
+
+        assert db.session.get(Comment, reply.id) is None
 
     def test_non_owner_cannot_edit_comment(self, create_user):
         amina = create_user(username="amina")

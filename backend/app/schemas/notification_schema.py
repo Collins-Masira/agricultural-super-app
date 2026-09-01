@@ -29,6 +29,10 @@ class NotificationSchema(ma.Schema):
     )
 
     post_title = fields.Method("get_post_title", dump_only=True)
+    is_reel = fields.Method("get_is_reel", dump_only=True)
 
     def get_post_title(self, notification):
         return notification.post.title if notification.post else None
+
+    def get_is_reel(self, notification):
+        return bool(notification.post and notification.post.video_url)

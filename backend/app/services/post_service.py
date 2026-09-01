@@ -43,16 +43,25 @@ def get_post_or_404(post_id):
     return post
 
 
-def list_posts(page=1, per_page=20, community_id=None):
+def list_posts(page=1, per_page=20, community_id=None, has_video=None):
     per_page = min(per_page, MAX_PAGE_SIZE)
+    query = db.session.query(Post).filter_by(community_id=community_id)
+    if has_video:
+        query = query.filter(Post.video_url.isnot(None))
     return (
-        db.session.query(Post)
-        .filter_by(community_id=community_id)
+        query
         .order_by(Post.created_at.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
         .all()
     )
+
+
+def increment_view_count(post_id):
+    post = get_post_or_404(post_id)
+    post.view_count += 1
+    db.session.commit()
+    return post
 
 
 def list_posts_by_user(user_id, page=1, per_page=20):
@@ -95,6 +104,7 @@ def update_post(current_user, post_id, data):
     data.pop("images", None)
     data.pop("community_id", None)
     data.pop("is_announcement", None)
+    data.pop("video_url", None)
 
     for key, value in data.items():
         setattr(post, key, value)
@@ -156,19 +166,41 @@ def _assert_can_comment(current_user, post):
         raise ForbiddenError("You do not have permission to comment in this community.")
 
 
-def add_comment(current_user, post_id, content):
+def add_comment(current_user, post_id, content, parent_comment_id=None):
     post = get_post_or_404(post_id)
     _assert_can_comment(current_user, post)
-    comment = Comment(user_id=current_user.id, post_id=post.id, content=content)
+
+    parent = None
+    if parent_comment_id is not None:
+        parent = get_comment_or_404(parent_comment_id)
+        if parent.post_id != post.id:
+            raise NotFoundError(f"Comment {parent_comment_id} not found on post {post_id}.")
+
+    comment = Comment(
+        user_id=current_user.id,
+        post_id=post.id,
+        parent_comment_id=parent.id if parent else None,
+        content=content,
+    )
     db.session.add(comment)
     db.session.commit()
-    notification_service.create_notification(
-        recipient_id=post.user_id,
-        actor_id=current_user.id,
-        type="post_comment",
-        post_id=post.id,
-        comment_id=comment.id,
-    )
+
+    if parent:
+        notification_service.create_notification(
+            recipient_id=parent.user_id,
+            actor_id=current_user.id,
+            type="comment_reply",
+            post_id=post.id,
+            comment_id=comment.id,
+        )
+    else:
+        notification_service.create_notification(
+            recipient_id=post.user_id,
+            actor_id=current_user.id,
+            type="post_comment",
+            post_id=post.id,
+            comment_id=comment.id,
+        )
     return comment
 
 

@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Avatar, Card, EmptyState, ErrorState, LoadingState, PostContent, ReactionPicker, RepostButton, SaveButton, ShareButton, VerifiedBadge } from '@/components/ui'
 import { RepeatIcon } from '@/components/icons'
 import { formatRelativeTime } from '@/lib/format'
-import { addComment, fetchPost, removeReaction, setReaction, toggleRepost, toggleSave } from '@/store/slices/postsSlice'
+import { fetchPost, removeReaction, setReaction, toggleRepost, toggleSave } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { CommentSection } from '../components/CommentSection'
 import { PostMenu } from '../components/PostMenu'
+import { PostMedia } from '../components/PostMedia'
 import '../components/posts.css'
 
 export function PostDetailPage() {
@@ -52,7 +53,10 @@ export function PostDetailPage() {
               </Link>
               <VerifiedBadge profile={post.author.profile} />
             </div>
-            <span className="asa-post-card__time">{formatRelativeTime(post.createdAt)}</span>
+            <span className="asa-post-card__time">
+              {post.author.profile.location ? `${post.author.profile.location} · ` : ''}
+              {formatRelativeTime(post.createdAt)}
+            </span>
           </div>
           <div className="asa-post-card__menu">
             <PostMenu post={post} onDeleted={() => navigate('/')} />
@@ -72,14 +76,13 @@ export function PostDetailPage() {
 
         <h1 className="asa-post-detail__title">{displayedPost.title}</h1>
         <PostContent content={displayedPost.content} className="asa-post-detail__content" />
-
-        {displayedPost.images.length > 0 && (
-          <div className="asa-post-detail__images">
-            {displayedPost.images.map((image) => (
-              <img key={image.id} src={image.imageUrl} alt="" />
-            ))}
-          </div>
-        )}
+        <PostMedia
+          images={displayedPost.images}
+          videoUrl={displayedPost.videoUrl}
+          onDoubleTap={() => {
+            if (!post.myReaction) dispatch(setReaction({ postId: post.id, reactionType: 'love' }))
+          }}
+        />
 
         <footer className="asa-post-card__footer">
           <ReactionPicker
@@ -95,12 +98,16 @@ export function PostDetailPage() {
             loading={repostLoading}
             onToggle={() => dispatch(toggleRepost(post.id))}
           />
-          <SaveButton saved={post.savedByMe} loading={saveLoading} onToggle={() => dispatch(toggleSave(post.id))} />
           <ShareButton postId={post.id} />
+          <SaveButton saved={post.savedByMe} loading={saveLoading} onToggle={() => dispatch(toggleSave(post.id))} />
         </footer>
+
+        {post.likeCount > 0 && <p className="asa-post-card__likes">{post.likeCount} likes</p>}
       </Card>
 
-      <CommentSection post={post} />
+      <div id="comments">
+        <CommentSection post={post} />
+      </div>
     </article>
   )
 }

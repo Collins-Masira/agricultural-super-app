@@ -234,3 +234,76 @@ export function LeafIcon(props) {
     </svg>
   )
 }
+
+export function CompassIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15 9-2 6-6 2 2-6 6-2Z" />
+    </svg>
+  )
+}
+
+export function ClapperIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="4.5" width="19" height="15" rx="3" />
+      <path d="M10.5 9.2v5.6l4.8-2.8-4.8-2.8Z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function ImageIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="1.8" fill="currentColor" stroke="none" />
+      <path d="m4.5 18 5-5 3.5 3.5L17 12l3 3" />
+    </svg>
+  )
+}
+
+export function VolumeIcon({ muted, ...props }) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      {!muted && <path d="M17.5 8.5a5 5 0 0 1 0 7" />}
+      {muted && <path d="M17 9l4 6M21 9l-4 6" />}
+    </svg>
+  )
+}
+
+export function PlayIcon(props) {
+  return (
+    <svg {...base(props)} fill="currentColor" stroke="none">
+      <path d="M7 4.5v15l13-7.5-13-7.5Z" />
+    </svg>
+  )
+}
+
+export function PauseIcon(props) {
+  return (
+    <svg {...base(props)} fill="currentColor" stroke="none">
+      <rect x="6" y="4.5" width="4" height="15" rx="1" />
+      <rect x="14" y="4.5" width="4" height="15" rx="1" />
+    </svg>
+  )
+}
+
+export function EyeCountIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  )
+}
+
+export function SendIcon(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  )
+}

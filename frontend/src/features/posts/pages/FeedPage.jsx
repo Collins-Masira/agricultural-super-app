@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, EmptyState, ErrorState, LoadingState, PageHeader, Tabs } from '@/components/ui'
+import { Button, EmptyState, ErrorState, Tabs } from '@/components/ui'
 import { fetchFeed } from '@/store/slices/postsSlice'
 import { fetchMyFollowing } from '@/store/slices/expertsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { useAuth } from '@/features/auth/AuthContext'
 import { PostCard } from '../components/PostCard'
+import { StoryBar } from '../components/StoryBar'
+import { SuggestedPanel } from '../components/SuggestedPanel'
+import { FeedSkeleton } from '../components/PostCardSkeleton'
 import '../components/posts.css'
 
 const FEED_FILTERS = [
@@ -28,7 +30,6 @@ function tipOfTheDay() {
 
 export function FeedPage() {
   const dispatch = useAppDispatch()
-  const { user } = useAuth()
   const posts = useAppSelector((state) => state.posts.feed)
   const status = useAppSelector((state) => state.posts.feedStatus)
   const error = useAppSelector((state) => state.posts.feedError)
@@ -39,8 +40,6 @@ export function FeedPage() {
     dispatch(fetchFeed({ page: 1, pageSize: 10 }))
     dispatch(fetchMyFollowing())
   }, [dispatch])
-
-  const welcomeName = user?.profile.firstName || user?.user.username
 
   const visiblePosts = useMemo(() => {
     if (filter === 'announcements') return posts.filter((post) => post.isAnnouncement)
@@ -64,35 +63,30 @@ export function FeedPage() {
   }[filter]
 
   return (
-    <>
-      <section className="asa-dashboard-hero">
-        <h1 className="asa-dashboard-hero__title">Welcome back, {welcomeName} 👋</h1>
-        <p className="asa-dashboard-hero__subtitle">Here's what's happening in your farming community.</p>
-        <div className="asa-dashboard-hero__actions">
-          <Button to="/create">📝 Create post</Button>
-          <Button to="/assistant" variant="secondary">🌱 Ask AI</Button>
-          <Button to="/search" variant="secondary">🔍 Find farmers</Button>
-        </div>
-        <p className="asa-dashboard-hero__tip">
-          <strong>Farming tip:</strong> {tipOfTheDay()}
+    <div className="asa-feed-layout">
+      <div className="asa-feed-layout__main">
+        <p className="asa-feed-tip">
+          <strong>🌱 Farming tip:</strong> {tipOfTheDay()}
         </p>
-      </section>
 
-      <PageHeader title="Community feed" subtitle="Latest from farmers and experts." />
+        {status === 'ready' && <StoryBar posts={posts} />}
 
-      <Tabs items={FEED_FILTERS} value={filter} onChange={setFilter} className="asa-feed-filters" />
+        <Tabs items={FEED_FILTERS} value={filter} onChange={setFilter} className="asa-feed-filters" />
 
-      {status === 'loading' && <LoadingState label="Loading posts…" />}
-      {status === 'error' && <ErrorState message={error ?? undefined} onRetry={() => dispatch(fetchFeed({ page: 1, pageSize: 10 }))} />}
-      {status === 'ready' && visiblePosts.length === 0 && (
-        <EmptyState
-          title={emptyCopy.title}
-          description={emptyCopy.description}
-          action={filter === 'all' ? <Button to="/create">Write a post</Button> : undefined}
-        />
-      )}
-      {status === 'ready' &&
-        visiblePosts.map((post) => <PostCard key={post.id} post={post} />)}
-    </>
+        {status === 'loading' && <FeedSkeleton />}
+        {status === 'error' && <ErrorState message={error ?? undefined} onRetry={() => dispatch(fetchFeed({ page: 1, pageSize: 10 }))} />}
+        {status === 'ready' && visiblePosts.length === 0 && (
+          <EmptyState
+            title={emptyCopy.title}
+            description={emptyCopy.description}
+            action={filter === 'all' ? <Button to="/create">Write a post</Button> : undefined}
+          />
+        )}
+        {status === 'ready' &&
+          visiblePosts.map((post) => <PostCard key={post.id} post={post} />)}
+      </div>
+
+      <SuggestedPanel />
+    </div>
   )
 }

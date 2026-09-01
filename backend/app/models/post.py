@@ -45,6 +45,18 @@ class Post(db.Model):
         nullable=False
     )
 
+    video_url = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    view_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        server_default="0"
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
@@ -115,5 +127,9 @@ class Post(db.Model):
             "user_id",
             "original_post_id",
             name="unique_user_repost"
+        ),
+        db.Index(
+            "ix_posts_video_url",
+            "video_url"
         ),
     )

@@ -24,6 +24,13 @@ class Comment(db.Model):
         nullable=False
     )
 
+    parent_comment_id = db.Column(
+        db.Integer,
+        db.ForeignKey("comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
+
     content = db.Column(
         db.Text,
         nullable=False
@@ -50,4 +57,16 @@ class Comment(db.Model):
     post = db.relationship(
         "Post",
         back_populates="comments"
+    )
+
+    parent = db.relationship(
+        "Comment",
+        remote_side=[id],
+        back_populates="replies"
+    )
+
+    replies = db.relationship(
+        "Comment",
+        back_populates="parent",
+        cascade="all, delete-orphan"
     )

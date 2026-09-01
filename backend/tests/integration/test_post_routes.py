@@ -244,6 +244,53 @@ class TestComments:
         response = client.delete("/api/comments/999999", headers=amina["headers"])
         assert response.status_code == 404
 
+    def test_reply_to_comment_sets_parent_comment_id(self, client, amina, brian):
+        post_id = self._create_post(client, amina["headers"])
+        parent_id = client.post(
+            f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Original"}
+        ).get_json()["id"]
+
+        reply_response = client.post(
+            f"/api/posts/{post_id}/comments",
+            headers=amina["headers"],
+            json={"content": "Thanks!", "parent_comment_id": parent_id},
+        )
+        assert reply_response.status_code == 201
+        assert reply_response.get_json()["parent_comment_id"] == parent_id
+
+    def test_reply_notifies_parent_comment_author_not_post_author(self, client, amina, brian, register_user):
+        carol = register_user(username="carol")
+        post_id = self._create_post(client, amina["headers"])
+        parent_id = client.post(
+            f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Original"}
+        ).get_json()["id"]
+
+        client.post(
+            f"/api/posts/{post_id}/comments",
+            headers=carol["headers"],
+            json={"content": "Thanks!", "parent_comment_id": parent_id},
+        )
+
+        brian_notifications = client.get("/api/notifications", headers=brian["headers"]).get_json()
+        assert any(n["type"] == "comment_reply" for n in brian_notifications)
+
+        amina_notifications = client.get("/api/notifications", headers=amina["headers"]).get_json()
+        assert not any(n["type"] == "comment_reply" for n in amina_notifications)
+
+    def test_reply_to_comment_on_a_different_post_returns_404(self, client, amina, brian):
+        post_one = self._create_post(client, amina["headers"])
+        post_two = self._create_post(client, amina["headers"])
+        parent_id = client.post(
+            f"/api/posts/{post_one}/comments", headers=brian["headers"], json={"content": "Original"}
+        ).get_json()["id"]
+
+        response = client.post(
+            f"/api/posts/{post_two}/comments",
+            headers=amina["headers"],
+            json={"content": "Wrong post", "parent_comment_id": parent_id},
+        )
+        assert response.status_code == 404
+
 
 class TestLikes:
     def _create_post(self, client, headers):
@@ -718,3 +765,80 @@ class TestCommentModeration:
             f"/api/posts/{post_id}/comments", headers=brian["headers"], json={"content": "Nice!"}
         )
         assert comment_response.status_code == 201
+
+
+class TestReels:
+    def _create_post(self, client, headers, video_url=None, title="T"):
+        payload = {"title": title, "content": "c"}
+        if video_url:
+            payload["video_url"] = video_url
+        response = client.post("/api/posts", headers=headers, json=payload)
+        return response.get_json()
+
+    def test_creating_a_post_with_video_url_marks_it_as_a_reel(self, client, amina):
+        post = self._create_post(client, amina["headers"], video_url="http://x/clip.mp4")
+        assert post["video_url"] == "http://x/clip.mp4"
+        assert post["view_count"] == 0
+
+    def test_regular_post_has_no_video_url(self, client, amina):
+        post = self._create_post(client, amina["headers"])
+        assert post["video_url"] is None
+
+    def test_has_video_filter_returns_only_reels(self, client, amina):
+        self._create_post(client, amina["headers"], title="A plain post")
+        reel = self._create_post(client, amina["headers"], video_url="http://x/clip.mp4", title="A reel")
+
+        response = client.get("/api/posts?has_video=true")
+        assert response.status_code == 200
+        titles = [p["title"] for p in response.get_json()]
+        assert titles == ["A reel"]
+        assert response.get_json()[0]["id"] == reel["id"]
+
+    def test_default_listing_still_includes_reels(self, client, amina):
+        self._create_post(client, amina["headers"], video_url="http://x/clip.mp4")
+        response = client.get("/api/posts")
+        assert len(response.get_json()) == 1
+
+    def test_editing_a_reel_does_not_clear_its_video_url(self, client, amina):
+        reel = self._create_post(client, amina["headers"], video_url="http://x/clip.mp4")
+        response = client.put(
+            f"/api/posts/{reel['id']}", headers=amina["headers"], json={"content": "Updated caption"}
+        )
+        assert response.status_code == 200
+        assert response.get_json()["video_url"] == "http://x/clip.mp4"
+        assert response.get_json()["content"] == "Updated caption"
+
+    def test_view_count_increments_and_does_not_require_auth(self, client, amina):
+        post = self._create_post(client, amina["headers"])
+        response = client.post(f"/api/posts/{post['id']}/view")
+        assert response.status_code == 200
+        assert response.get_json()["view_count"] == 1
+
+        client.post(f"/api/posts/{post['id']}/view")
+        get_response = client.get(f"/api/posts/{post['id']}")
+        assert get_response.get_json()["view_count"] == 2
+
+    def test_view_count_on_unknown_post_returns_404(self, client):
+        response = client.post("/api/posts/999999/view")
+        assert response.status_code == 404
+
+    def test_reel_can_be_liked_commented_saved_reposted_and_reported_like_any_post(
+        self, client, amina, brian
+    ):
+        reel = self._create_post(client, amina["headers"], video_url="http://x/clip.mp4")
+
+        assert client.post(f"/api/posts/{reel['id']}/like", headers=brian["headers"]).status_code == 201
+        assert (
+            client.post(
+                f"/api/posts/{reel['id']}/comments", headers=brian["headers"], json={"content": "Nice!"}
+            ).status_code
+            == 201
+        )
+        assert client.post(f"/api/posts/{reel['id']}/save", headers=brian["headers"]).status_code == 201
+        assert client.post(f"/api/posts/{reel['id']}/repost", headers=brian["headers"]).status_code == 201
+        assert (
+            client.post(
+                f"/api/posts/{reel['id']}/report", headers=brian["headers"], json={"reason": "spam"}
+            ).status_code
+            == 201
+        )

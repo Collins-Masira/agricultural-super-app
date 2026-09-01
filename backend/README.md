@@ -92,13 +92,21 @@ one-off script) — never via an API route. `admin_required` (`app/auth/decorato
 actual security boundary enforced on every `/api/admin/*` route; any frontend admin-nav hiding
 is UX only.
 
-## Image uploads
+## Image and video uploads
 
 `POST /api/uploads` accepts a multipart image file (JPEG/PNG/WebP, validated by real content via
 Pillow, not by extension/filename), re-encodes it (strips embedded metadata), and stores it under
 `UPLOAD_FOLDER` (defaults to `<instance>/uploads`; override with the `UPLOAD_FOLDER` env var to
 point at a different path, or swap `app/services/upload_service.py` for an object-storage backend
-later). Max upload size is `MAX_CONTENT_LENGTH` (default 5MB, env-overridable).
+later). Images are capped at 5MB.
+
+`POST /api/uploads/video` accepts a multipart video file (MP4/MOV/WebM, for Reels/FarmClips) up to
+50MB, validated by a magic-byte check on the container format (there's no video-processing
+dependency in this project to decode/re-encode it like images). Stored the same way, served from
+the same `GET /api/uploads/<filename>`.
+
+`MAX_CONTENT_LENGTH` (env-overridable, default 50MB) is the app-wide Flask request-body ceiling;
+each upload type still enforces its own stricter limit inside `upload_service.py`.
 
 ## Email (password reset delivery)
 

@@ -206,8 +206,10 @@
 /* ---- Image uploader ----------------------------------------------------- */
 .asa-image-uploader {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: var(--space-3);
+  padding-bottom: var(--space-1);
 }
 
 .asa-image-uploader__tile {
@@ -415,7 +417,7 @@
 }
 
 .asa-badge--success {
-  background-color: var(--color-accent-soft);
+  background-color: var(--color-primary-soft);
   color: var(--color-success);
 }
 
@@ -526,8 +528,38 @@
   display: inline-block;
 }
 
+.asa-reaction-picker__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.asa-reaction-picker__heart {
+  padding-right: var(--space-2);
+}
+
 .asa-reaction-picker__trigger--active {
-  color: var(--color-primary);
+  color: var(--color-danger);
+}
+.asa-reaction-picker__trigger--active svg {
+  animation: asa-pop var(--transition-base);
+}
+
+.asa-reaction-picker__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.asa-reaction-picker__chevron:hover {
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
 }
 
 .asa-reaction-picker__menu {
@@ -730,4 +762,29 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* ---- Toast ------------------------------------------------------------- */
+.asa-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--bottom-nav-height) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-lg);
+  animation: asa-toast-in var(--transition-base);
+  text-align: center;
+}
+
+@media (min-width: 40rem) {
+  .asa-toast {
+    bottom: var(--space-5);
+  }
 }

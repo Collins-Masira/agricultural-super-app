@@ -88,4 +88,63 @@ describe('CommentSection', () => {
     expect(textarea).toHaveValue(sentence)
     expect(textarea).toHaveFocus()
   })
+
+  it('nests a reply under its parent comment', () => {
+    renderWithStore(
+      basePost({
+        comments: [
+          {
+            id: 10,
+            parentCommentId: null,
+            content: 'Original',
+            createdAt: new Date().toISOString(),
+            author: { profile: { firstName: null, lastName: null }, user: { username: 'amina' } },
+          },
+          {
+            id: 11,
+            parentCommentId: 10,
+            content: 'Thanks for the tip!',
+            createdAt: new Date().toISOString(),
+            author: { profile: { firstName: null, lastName: null }, user: { username: 'brian' } },
+          },
+        ],
+      }),
+    )
+
+    expect(screen.getByText('Original')).toBeInTheDocument()
+    expect(screen.getByText('Thanks for the tip!')).toBeInTheDocument()
+  })
+
+  it('replying to a comment posts with that comment as the parent', async () => {
+    const { postsService } = await import('@/services')
+    postsService.addComment.mockResolvedValue({
+      id: 20,
+      parentCommentId: 10,
+      content: 'Thanks!',
+      createdAt: new Date().toISOString(),
+      author: { profile: { firstName: null, lastName: null }, user: { username: 'brian' } },
+    })
+    const user = userEvent.setup()
+    renderWithStore(
+      basePost({
+        comments: [
+          {
+            id: 10,
+            parentCommentId: null,
+            content: 'Original',
+            createdAt: new Date().toISOString(),
+            author: { profile: { firstName: null, lastName: null }, user: { username: 'amina' } },
+          },
+        ],
+      }),
+    )
+
+    await user.click(screen.getByRole('button', { name: /reply/i }))
+    expect(screen.getByText(/reply to amina/i)).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(/your comment/i), 'Thanks!')
+    await user.click(screen.getByRole('button', { name: /post reply/i }))
+
+    expect(postsService.addComment).toHaveBeenCalledWith(1, 'Thanks!', 10)
+  })
 })

@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { Button, Dropdown, Input, Modal } from '@/components/ui'
+import { Button, Dropdown, Modal, Textarea } from '@/components/ui'
 import { MoreIcon } from '@/components/icons'
 import { errorMessage, useAuth } from '@/features/auth/AuthContext'
 import { deletePost, updatePost } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { PostContentEditor } from './PostContentEditor'
 import { ReportPostModal } from './ReportPostModal'
 
 function canModifyPost(post, user) {
@@ -20,31 +19,28 @@ function canDeletePost(post, user, community) {
 
 function EditPostModal({ post, open, onClose }) {
   const dispatch = useAppDispatch()
-  const [title, setTitle] = useState(post.title)
   const [content, setContent] = useState(post.content)
-  const [fieldErrors, setFieldErrors] = useState({})
+  const [fieldError, setFieldError] = useState(null)
   const [error, setError] = useState(null)
   const saving = useAppSelector((state) => state.posts.updateLoadingPostId === post.id)
 
   function handleClose() {
-    setTitle(post.title)
     setContent(post.content)
-    setFieldErrors({})
+    setFieldError(null)
     setError(null)
     onClose()
   }
 
   async function handleSave() {
-    const errors = {}
-    if (!title.trim()) errors.title = 'Please add a title.'
-    if (!content.trim()) errors.content = 'Please add some content.'
-    setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
-
+    if (!content.trim()) {
+      setFieldError('Please add some content.')
+      return
+    }
+    setFieldError(null)
     setError(null)
     try {
       await dispatch(
-        updatePost({ postId: post.id, title: title.trim(), content: content.trim() }),
+        updatePost({ postId: post.id, title: post.title, content: content.trim() }),
       ).unwrap()
       onClose()
     } catch (err) {
@@ -54,14 +50,15 @@ function EditPostModal({ post, open, onClose }) {
 
   return (
     <Modal open={open} title="Edit post" onClose={handleClose}>
-      <Input
-        label="Title"
-        name="title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        error={fieldErrors.title}
+      <Textarea
+        label="Caption"
+        name="content"
+        rows={6}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        error={fieldError}
+        autoFocus
       />
-      <PostContentEditor content={content} onChange={setContent} error={fieldErrors.content} rows={6} />
       {error && <p className="asa-post-menu__error">{error}</p>}
       <div className="asa-post-menu__actions">
         <Button variant="secondary" onClick={handleClose} disabled={saving}>
