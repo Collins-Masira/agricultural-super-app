@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { bottomNavItems } from './nav'
+import { CreateButton } from './CreateButton'
 import './layout.css'
 
 export function BottomNav() {
@@ -10,19 +11,25 @@ export function BottomNav() {
 
   return (
     <nav className="asa-bottom-nav" aria-label="Main">
-      {visibleItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.to === '/'}
-          className={({ isActive }) =>
-            `asa-bottom-nav__link ${isActive ? 'asa-bottom-nav__link--active' : ''}`
-          }
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </NavLink>
-      ))}
+      {visibleItems.map((item) =>
+        item.to === '/create' ? (
+          <span className="asa-bottom-nav__link asa-bottom-nav__link--create-slot" key={item.to}>
+            <CreateButton variant="bottom-nav" />
+          </span>
+        ) : (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `asa-bottom-nav__link ${isActive ? 'asa-bottom-nav__link--active' : ''}`
+            }
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </NavLink>
+        ),
+      )}
     </nav>
   )
 }

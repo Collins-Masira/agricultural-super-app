@@ -13,6 +13,7 @@ vi.mock('@/services', () => ({
   postsService: {
     deletePost: vi.fn(),
     updatePost: vi.fn(),
+    reportPost: vi.fn(),
   },
 }))
 
@@ -36,6 +37,9 @@ function renderMenu({ post, currentUser, community = null, onDeleted } = {}) {
         feed: [post],
         feedStatus: 'ready',
         feedError: null,
+        reels: [],
+        reelsStatus: 'idle',
+        reelsError: null,
         current: null,
         currentStatus: 'idle',
         currentError: null,
@@ -97,9 +101,19 @@ describe('PostMenu', () => {
     expect(screen.getByRole('button', { name: /post options/i })).toBeInTheDocument()
   })
 
-  it('does not show the options menu for an unauthorized user', () => {
-    renderMenu({ post: postFixture(), currentUser: otherUser })
+  it('does not show the options menu for an anonymous viewer', () => {
+    renderMenu({ post: postFixture(), currentUser: null })
     expect(screen.queryByRole('button', { name: /post options/i })).not.toBeInTheDocument()
+  })
+
+  it('offers only Report (no Edit/Delete) for a logged-in non-owner', async () => {
+    const user = userEvent.setup()
+    renderMenu({ post: postFixture(), currentUser: otherUser })
+
+    await user.click(screen.getByRole('button', { name: /post options/i }))
+    expect(screen.queryByRole('menuitem', { name: /edit/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /delete/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /report/i })).toBeInTheDocument()
   })
 
   it('shows a confirmation dialog when Delete is chosen', async () => {
@@ -155,7 +169,7 @@ describe('PostMenu', () => {
     expect(store.getState().posts.feed).toHaveLength(1)
   })
 
-  it('shows an edit dialog pre-filled with the post when Edit is chosen', async () => {
+  it('shows an edit dialog pre-filled with the post content, with no title field', async () => {
     const user = userEvent.setup()
     renderMenu({ post: postFixture(), currentUser: owner })
 
@@ -163,15 +177,15 @@ describe('PostMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     expect(screen.getByText('Edit post')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Original title')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Original content')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^title$/i)).not.toBeInTheDocument()
   })
 
   it('saves edits and updates the post in the feed', async () => {
     const { postsService } = await import('@/services')
     postsService.updatePost.mockResolvedValue({
       id: 1,
-      title: 'Updated title',
+      title: 'Original title',
       content: 'Updated content',
       updatedAt: '2026-08-28T00:00:00Z',
     })
@@ -180,14 +194,14 @@ describe('PostMenu', () => {
 
     await user.click(screen.getByRole('button', { name: /post options/i }))
     await user.click(screen.getByRole('menuitem', { name: /edit/i }))
-    await user.clear(screen.getByLabelText(/title/i))
-    await user.type(screen.getByLabelText(/title/i), 'Updated title')
-    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    await user.clear(screen.getByLabelText(/caption/i))
+    await user.type(screen.getByLabelText(/caption/i), 'Updated content')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
 
-    await waitFor(() => expect(store.getState().posts.feed[0].title).toBe('Updated title'))
+    await waitFor(() => expect(store.getState().posts.feed[0].content).toBe('Updated content'))
     expect(postsService.updatePost).toHaveBeenCalledWith(1, {
-      title: 'Updated title',
-      content: 'Original content',
+      title: 'Original title',
+      content: 'Updated content',
     })
     expect(screen.queryByText('Edit post')).not.toBeInTheDocument()
   })

@@ -35,6 +35,7 @@ SWAGGER_TEMPLATE = {
         {"name": "AI", "description": "AI Farming Assistant conversations and messages."},
         {"name": "Admin", "description": "Admin-only moderation and stats (role=admin)."},
         {"name": "Uploads", "description": "Image upload for posts and profiles."},
+        {"name": "Notifications", "description": "In-app notifications for likes, comments, and follows."},
     ],
     "definitions": {
         "Error": {
@@ -233,6 +234,36 @@ SWAGGER_TEMPLATE = {
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
                 "messages": {"type": "array", "items": {"$ref": "#/definitions/AIMessage"}},
+            },
+        },
+        "Notification": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "type": {"type": "string", "enum": ["post_like", "post_comment", "follow"]},
+                "is_read": {"type": "boolean"},
+                "created_at": {"type": "string", "format": "date-time"},
+                "post_id": {"type": "integer", "x-nullable": True},
+                "comment_id": {"type": "integer", "x-nullable": True},
+                "post_title": {"type": "string", "x-nullable": True},
+                "actor": {"$ref": "#/definitions/UserPublic"},
+            },
+        },
+        "Report": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "post_id": {"type": "integer"},
+                "reason": {
+                    "type": "string",
+                    "enum": ["spam", "harassment", "scam", "misleading", "inappropriate", "other"],
+                },
+                "details": {"type": "string", "x-nullable": True},
+                "status": {"type": "string", "enum": ["pending", "reviewed", "dismissed"]},
+                "created_at": {"type": "string", "format": "date-time"},
+                "reviewed_at": {"type": "string", "format": "date-time", "x-nullable": True},
+                "reporter": {"$ref": "#/definitions/UserPublic"},
+                "post": {"type": "object"},
             },
         },
     },

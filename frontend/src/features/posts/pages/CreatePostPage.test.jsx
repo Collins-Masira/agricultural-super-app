@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import authReducer from '@/store/slices/authSlice'
 import communitiesReducer from '@/store/slices/communitiesSlice'
 import postsReducer from '@/store/slices/postsSlice'
 import { CreatePostPage } from './CreatePostPage'
@@ -14,11 +15,20 @@ vi.mock('@/services', () => ({
   },
   communitiesService: {
     getCommunity: vi.fn(),
+    listCommunities: vi.fn().mockResolvedValue({ items: [] }),
   },
 }))
 
 function renderCreatePostPage(initialPath = '/create') {
-  const store = configureStore({ reducer: { posts: postsReducer, communities: communitiesReducer } })
+  const store = configureStore({
+    reducer: { auth: authReducer, posts: postsReducer, communities: communitiesReducer },
+    preloadedState: {
+      auth: {
+        status: 'authenticated',
+        user: { user: { id: 1, username: 'amina', role: 'farmer' }, profile: { firstName: 'Amina', lastName: 'W' } },
+      },
+    },
+  })
   return render(
     <Provider store={store}>
       <MemoryRouter initialEntries={[initialPath]}>
@@ -29,23 +39,11 @@ function renderCreatePostPage(initialPath = '/create') {
 }
 
 describe('CreatePostPage typing', () => {
-  it('keeps the title field focused while typing continuously', async () => {
+  it('keeps the caption focused while typing continuously', async () => {
     const user = userEvent.setup()
     renderCreatePostPage()
 
-    const input = screen.getByLabelText(/title/i)
-    await user.click(input)
-    await user.type(input, 'Preparing your soil before the rains')
-
-    expect(input).toHaveValue('Preparing your soil before the rains')
-    expect(input).toHaveFocus()
-  })
-
-  it('keeps the content field focused while typing a full paragraph', async () => {
-    const user = userEvent.setup()
-    renderCreatePostPage()
-
-    const textarea = screen.getByLabelText(/content/i)
+    const textarea = screen.getByLabelText(/post caption/i)
     const paragraph = 'Neem oil is an effective and affordable way to control common pests on tomatoes.'
     await user.click(textarea)
     await user.type(textarea, paragraph)
@@ -53,51 +51,24 @@ describe('CreatePostPage typing', () => {
     expect(textarea).toHaveValue(paragraph)
     expect(textarea).toHaveFocus()
   })
-})
 
-describe('CreatePostPage formatted content', () => {
-  it('preserves pasted multiline, formatted content and keeps typing afterwards without losing focus', async () => {
-    const user = userEvent.setup()
+  it('does not show a title field or markdown formatting toolbar', () => {
     renderCreatePostPage()
 
-    const textarea = screen.getByLabelText(/content/i)
-    await user.click(textarea)
-
-    const pasted = '**Clear Debris and Weeds**\n\n* Remove rocks.\n* Remove weeds.'
-    await user.paste(pasted)
-    expect(textarea).toHaveValue(pasted)
-    expect(textarea).toHaveFocus()
-
-    await user.type(textarea, '\nMore notes.')
-    expect(textarea).toHaveValue(`${pasted}\nMore notes.`)
-    expect(textarea).toHaveFocus()
+    expect(screen.queryByLabelText(/^title$/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^bold$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^italic$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /preview/i })).not.toBeInTheDocument()
   })
 
-  it('wraps the selected text in ** when the Bold toolbar button is used', async () => {
+  it('disables Post until a caption is entered', async () => {
     const user = userEvent.setup()
     renderCreatePostPage()
 
-    const textarea = screen.getByLabelText(/content/i)
-    await user.click(textarea)
-    await user.type(textarea, 'important')
-    textarea.setSelectionRange(0, 'important'.length)
+    expect(screen.getByRole('button', { name: /^post$/i })).toBeDisabled()
 
-    await user.click(screen.getByRole('button', { name: /bold/i }))
-
-    expect(textarea).toHaveValue('**important**')
-  })
-
-  it('shows a rendered preview of the current draft under the Preview tab', async () => {
-    const user = userEvent.setup()
-    renderCreatePostPage()
-
-    const textarea = screen.getByLabelText(/content/i)
-    await user.click(textarea)
-    await user.type(textarea, '**Bold section**')
-
-    await user.click(screen.getByRole('tab', { name: /preview/i }))
-
-    expect(screen.getByText('Bold section').tagName).toBe('STRONG')
+    await user.type(screen.getByLabelText(/post caption/i), 'Harvest day!')
+    expect(screen.getByRole('button', { name: /^post$/i })).toBeEnabled()
   })
 })
 

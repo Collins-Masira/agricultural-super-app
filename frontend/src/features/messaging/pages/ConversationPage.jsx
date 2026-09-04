@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Avatar, Button, ErrorState, LoadingState, Textarea } from '@/components/ui'
+import { SendIcon } from '@/components/icons'
 import { formatRelativeTime } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -99,8 +100,8 @@ export function ConversationPage() {
             }
           }}
         />
-        <Button type="submit" loading={sending} disabled={!draft.trim()}>
-          Send
+        <Button type="submit" loading={sending} disabled={!draft.trim()} aria-label="Send message">
+          <SendIcon width={18} height={18} />
         </Button>
       </form>
     </div>

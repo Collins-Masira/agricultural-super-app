@@ -45,6 +45,18 @@ class Post(db.Model):
         nullable=False
     )
 
+    video_url = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    view_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        server_default="0"
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
@@ -104,10 +116,20 @@ class Post(db.Model):
         cascade="all, delete-orphan"
     )
 
+    reports = db.relationship(
+        "Report",
+        back_populates="post",
+        cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         db.UniqueConstraint(
             "user_id",
             "original_post_id",
             name="unique_user_repost"
+        ),
+        db.Index(
+            "ix_posts_video_url",
+            "video_url"
         ),
     )

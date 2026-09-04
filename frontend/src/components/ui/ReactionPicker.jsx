@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronDownIcon, HeartIcon } from '@/components/icons'
 import './ui.css'
 
 export const REACTIONS = [
@@ -48,20 +49,47 @@ export function ReactionPicker({ reactionCounts = {}, myReaction, onReact, onRem
     }
   }
 
+  function handleHeartClick() {
+    if (loading) return
+    if (current) {
+      onRemove()
+    } else {
+      onReact('love')
+    }
+  }
+
   return (
     <div className="asa-reaction-picker" ref={rootRef}>
-      <button
-        type="button"
-        className={`asa-btn asa-btn--ghost asa-btn--sm asa-post__action ${current ? 'asa-reaction-picker__trigger--active' : ''}`}
-        onClick={() => setOpen((value) => !value)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        disabled={loading}
-      >
-        <span aria-hidden="true">{current ? current.emoji : '🤍'}</span>
-        <span>{totalCount}</span>
-        <span className="visually-hidden">{current ? `Your reaction: ${current.label}` : 'React to this post'}</span>
-      </button>
+      <span className="asa-reaction-picker__group">
+        <button
+          type="button"
+          className={`asa-btn asa-btn--ghost asa-btn--sm asa-post__action asa-reaction-picker__heart ${current ? 'asa-reaction-picker__trigger--active' : ''}`}
+          onClick={handleHeartClick}
+          aria-pressed={Boolean(current)}
+          disabled={loading}
+        >
+          {current ? (
+            <span aria-hidden="true">{current.emoji}</span>
+          ) : (
+            <HeartIcon width={19} height={19} />
+          )}
+          <span>{totalCount}</span>
+          <span className="visually-hidden">
+            {current ? `Remove your ${current.label} reaction` : 'Like this post'}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="asa-reaction-picker__chevron"
+          onClick={() => setOpen((value) => !value)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={current ? `Your reaction: ${current.label}` : 'React to this post'}
+          disabled={loading}
+        >
+          <ChevronDownIcon width={14} height={14} />
+        </button>
+      </span>
 
       {open && (
         <ul className="asa-reaction-picker__menu" role="menu">

@@ -4,8 +4,8 @@ from flask import Blueprint, current_app, jsonify, request
 
 from app.auth.decorators import admin_required, get_current_user
 from app.errors import ValidationAPIError
-from app.schemas import PostSchema, user_schema, users_schema
-from app.services import admin_service
+from app.schemas import PostSchema, report_schema, reports_schema, user_schema, users_schema
+from app.services import admin_service, report_service
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -38,6 +38,8 @@ def get_stats():
               type: integer
             messages:
               type: integer
+            reports:
+              type: object
             ai:
               type: object
             recent_users:
@@ -81,6 +83,7 @@ def get_stats():
             "communities": stats["communities"],
             "conversations": stats["conversations"],
             "messages": stats["messages"],
+            "reports": stats["reports"],
             "ai": stats["ai"],
             "recent_users": users_schema.dump(stats["recent_users"]),
             "recent_posts": recent_posts_schema.dump(stats["recent_posts"]),
@@ -245,3 +248,114 @@ def update_user(user_id):
 
     user = admin_service.update_user(get_current_user(), user_id, is_active=is_active, role=role)
     return jsonify(user_schema.dump(user)), 200
+
+
+@admin_bp.get("/reports")
+@admin_required
+def list_reports():
+    """
+    List/filter reported posts for moderation.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: query
+        name: status
+        type: string
+        enum: [pending, reviewed, dismissed]
+      - in: query
+        name: page
+        type: integer
+        default: 1
+      - in: query
+        name: per_page
+        type: integer
+        default: 20
+    responses:
+      200:
+        description: A page of reports.
+        schema:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/definitions/Report'
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+    """
+    status = request.args.get("status")
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=20, type=int)
+
+    result = report_service.list_reports(status=status, page=page, per_page=per_page)
+    return jsonify(
+        {
+            "items": reports_schema.dump(result["items"]),
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total": result["total"],
+        }
+    ), 200
+
+
+@admin_bp.patch("/reports/<int:report_id>")
+@admin_required
+def review_report(report_id):
+    """
+    Mark a report as reviewed or dismissed.
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: report_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [reviewed, dismissed]
+    responses:
+      200:
+        description: Report updated.
+        schema:
+          $ref: '#/definitions/Report'
+      403:
+        description: Not an admin.
+        schema:
+          $ref: '#/definitions/Error'
+      404:
+        description: Report not found.
+        schema:
+          $ref: '#/definitions/Error'
+      422:
+        description: status is required and must be reviewed or dismissed.
+        schema:
+          $ref: '#/definitions/Error'
+    """
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status")
+    if not status:
+        raise ValidationAPIError("status is required.")
+
+    report = report_service.review_report(get_current_user(), report_id, status)
+    return jsonify(report_schema.dump(report)), 200

@@ -32,6 +32,9 @@ class PostSchema(ma.Schema):
         validate=validate.Length(min=1),
     )
 
+    video_url = fields.String(allow_none=True, load_default=None)
+    view_count = fields.Integer(dump_only=True)
+
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -53,7 +56,7 @@ class PostSchema(ma.Schema):
     original_post = fields.Nested(
         "PostSchema",
         dump_only=True,
-        only=("id", "title", "content", "author", "created_at", "images", "is_announcement"),
+        only=("id", "title", "content", "author", "created_at", "images", "is_announcement", "video_url"),
     )
 
     like_count = fields.Method("get_like_count", dump_only=True)

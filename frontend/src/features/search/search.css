@@ -1,0 +1,21 @@
+.asa-search__bar {
+  position: relative;
+  margin-bottom: var(--space-5);
+}
+
+.asa-search__bar .asa-field {
+  margin-bottom: 0;
+}
+
+.asa-search__input {
+  padding-left: 2.5rem;
+}
+
+.asa-search__icon {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}

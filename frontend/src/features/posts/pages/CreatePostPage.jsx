@@ -1,100 +1,61 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, ImageUploader, Input, PageHeader, PostContent, Tabs, Textarea } from '@/components/ui'
+import { Avatar, Button, ImageUploader, Textarea } from '@/components/ui'
+import { ClapperIcon, LeafIcon } from '@/components/icons'
 import { createPost } from '@/store/slices/postsSlice'
-import { fetchCommunity } from '@/store/slices/communitiesSlice'
+import { fetchCommunities, fetchCommunity } from '@/store/slices/communitiesSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { errorMessage } from '@/features/auth/AuthContext'
+import { useAuth, errorMessage } from '@/features/auth/AuthContext'
+import { deriveTitle } from '@/lib/format'
 import '../components/posts.css'
 
-const CONTENT_TABS = [
-  { value: 'write', label: 'Write' },
-  { value: 'preview', label: 'Preview' },
-]
-
-function wrapSelection(content, textarea, prefix, suffix, placeholder) {
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const before = content.slice(0, start)
-  const selected = content.slice(start, end) || placeholder
-  const after = content.slice(end)
-  return {
-    next: `${before}${prefix}${selected}${suffix}${after}`,
-    selectionStart: before.length + prefix.length,
-    selectionEnd: before.length + prefix.length + selected.length,
-  }
-}
-
-function prefixSelectedLines(content, textarea, placeholder, makePrefix) {
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const before = content.slice(0, start)
-  const selected = content.slice(start, end) || placeholder
-  const after = content.slice(end)
-  const prefixed = selected.split('\n').map((line, index) => `${makePrefix(index)}${line}`).join('\n')
-  return {
-    next: `${before}${prefixed}${after}`,
-    selectionStart: before.length,
-    selectionEnd: before.length + prefixed.length,
-  }
+function displayName(user) {
+  return user.profile.firstName && user.profile.lastName
+    ? `${user.profile.firstName} ${user.profile.lastName}`
+    : user.user.username
 }
 
 export function CreatePostPage() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
-  const communityId = searchParams.get('communityId') ? Number(searchParams.get('communityId')) : null
+  const communityIdFromUrl = searchParams.get('communityId') ? Number(searchParams.get('communityId')) : null
 
   const community = useAppSelector((state) => state.communities.current)
-  const communityStatus = useAppSelector((state) => state.communities.currentStatus)
+  const communities = useAppSelector((state) => state.communities.list)
+  const myCommunities = useMemo(() => communities.filter((c) => c.myRole), [communities])
 
-  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [contentMode, setContentMode] = useState('write')
   const [imageUrls, setImageUrls] = useState([])
   const [imagesUploading, setImagesUploading] = useState(false)
   const [isAnnouncement, setIsAnnouncement] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState({})
+  const [pickedCommunityId, setPickedCommunityId] = useState('')
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const textareaRef = useRef(null)
-
-  function applyFormatting(transform) {
-    const textarea = textareaRef.current
-    if (!textarea) return
-    const result = transform(content, textarea)
-    setContent(result.next)
-    requestAnimationFrame(() => {
-      textarea.focus()
-      textarea.setSelectionRange(result.selectionStart, result.selectionEnd)
-    })
-  }
 
   useEffect(() => {
-    if (communityId) dispatch(fetchCommunity(communityId))
-  }, [dispatch, communityId])
+    if (communityIdFromUrl) dispatch(fetchCommunity(communityIdFromUrl))
+    else dispatch(fetchCommunities({ page: 1, pageSize: 50 }))
+  }, [dispatch, communityIdFromUrl])
 
-  const activeCommunity = communityId && community?.id === communityId ? community : null
+  const communityId = communityIdFromUrl || (pickedCommunityId ? Number(pickedCommunityId) : null)
+  const activeCommunity = communityIdFromUrl
+    ? (community?.id === communityIdFromUrl ? community : null)
+    : myCommunities.find((c) => c.id === communityId) ?? null
   const canPostAnnouncement = Boolean(activeCommunity && activeCommunity.myRole === 'admin')
-
-  function validate() {
-    const errors = {}
-    if (!title.trim()) errors.title = 'Please add a title.'
-    if (!content.trim()) errors.content = 'Please add some content.'
-    setFieldErrors(errors)
-    return Object.keys(errors).length === 0
-  }
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!validate() || submitting || imagesUploading) return
+    const trimmed = content.trim()
+    if (!trimmed || submitting || imagesUploading) return
     setSubmitting(true)
     setFormError(null)
     try {
       const post = await dispatch(
         createPost({
-          title: title.trim(),
-          content: content.trim(),
+          title: deriveTitle(trimmed),
+          content: trimmed,
           imageUrls,
           communityId,
           isAnnouncement: canPostAnnouncement && isAnnouncement,
@@ -107,115 +68,62 @@ export function CreatePostPage() {
     }
   }
 
-  const pageTitle = communityId ? (canPostAnnouncement && isAnnouncement ? 'New announcement' : 'New community post') : 'New post'
-  const pageSubtitle = communityId
-    ? `Share knowledge with ${activeCommunity?.name ?? 'this community'}.`
-    : 'Share knowledge with the community.'
+  const heading = communityId
+    ? (canPostAnnouncement && isAnnouncement ? 'New announcement' : `Post to ${activeCommunity?.name ?? 'community'}`)
+    : 'Create post'
 
   return (
-    <>
-      <PageHeader title={pageTitle} subtitle={pageSubtitle} />
-      <form onSubmit={handleSubmit} noValidate>
-        <Input
-          label="Title"
-          name="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          error={fieldErrors.title}
-          placeholder="e.g. Preparing your soil before the rains"
-        />
-        <div className="asa-composer__content">
-          <Tabs items={CONTENT_TABS} value={contentMode} onChange={setContentMode} className="asa-composer__tabs" />
+    <div className="asa-social-composer">
+      <h1 className="asa-social-composer__heading">{heading}</h1>
 
-          {contentMode === 'write' ? (
-            <>
-              <div className="asa-composer-toolbar" role="toolbar" aria-label="Formatting">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Bold"
-                  onClick={() => applyFormatting((c, t) => wrapSelection(c, t, '**', '**', 'bold text'))}
-                >
-                  B
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Italic"
-                  onClick={() => applyFormatting((c, t) => wrapSelection(c, t, '*', '*', 'italic text'))}
-                >
-                  I
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Bullet list"
-                  onClick={() =>
-                    applyFormatting((c, t) => prefixSelectedLines(c, t, 'List item', () => '- '))
-                  }
-                >
-                  • List
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Numbered list"
-                  onClick={() =>
-                    applyFormatting((c, t) => prefixSelectedLines(c, t, 'List item', (i) => `${i + 1}. `))
-                  }
-                >
-                  1. List
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Link"
-                  onClick={() =>
-                    applyFormatting((c, t) => wrapSelection(c, t, '[', '](https://example.com)', 'link text'))
-                  }
-                >
-                  🔗
-                </Button>
-              </div>
-              <Textarea
-                ref={textareaRef}
-                label="Content"
-                name="content"
-                rows={8}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                error={fieldErrors.content}
-                placeholder="What would you like to share? Markdown is supported: **bold**, *italic*, - lists, [links](https://…)."
-              />
-            </>
-          ) : (
-            <div className="asa-field">
-              <span className="asa-field__label">Content preview</span>
-              <div className="asa-composer__preview">
-                {content.trim() ? (
-                  <PostContent content={content} />
-                ) : (
-                  <p className="asa-field__hint">Nothing to preview yet.</p>
-                )}
-              </div>
-            </div>
+      <form onSubmit={handleSubmit}>
+        {user && (
+          <div className="asa-social-composer__author">
+            <Avatar imageUrl={user.profile.profileImageUrl} name={displayName(user)} username={user.user.username} size="md" />
+            <strong>{displayName(user)}</strong>
+          </div>
+        )}
+
+        <Textarea
+          label=""
+          name="content"
+          aria-label="Post caption"
+          rows={5}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="What's happening on your farm? 🌱"
+          className="asa-social-composer__textarea"
+          autoFocus
+        />
+
+        <ImageUploader multiple maxFiles={6} onChange={setImageUrls} onBusyChange={setImagesUploading} />
+
+        <div className="asa-social-composer__attachments">
+          <button
+            type="button"
+            className="asa-social-composer__attachment"
+            onClick={() => navigate('/create/reel')}
+          >
+            <ClapperIcon width={18} height={18} />
+            Video (Reel)
+          </button>
+
+          {myCommunities.length > 0 && !communityIdFromUrl && (
+            <label className="asa-social-composer__attachment asa-social-composer__attachment--select">
+              <LeafIcon width={18} height={18} />
+              <select value={pickedCommunityId} onChange={(event) => setPickedCommunityId(event.target.value)}>
+                <option value="">Your feed</option>
+                {myCommunities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
 
-        <ImageUploader
-          label="Photos (optional)"
-          multiple
-          maxFiles={6}
-          onChange={setImageUrls}
-          onBusyChange={setImagesUploading}
-        />
-
-        {communityId && communityStatus === 'ready' && canPostAnnouncement && (
+        {canPostAnnouncement && (
           <label className="asa-quick-composer__announcement">
             <input
               type="checkbox"
@@ -228,10 +136,20 @@ export function CreatePostPage() {
 
         {formError && <p className="asa-form-error" role="alert">{formError}</p>}
 
-        <Button type="submit" loading={submitting} disabled={submitting || imagesUploading}>
-          {imagesUploading ? 'Waiting for photos to finish uploading…' : 'Publish post'}
-        </Button>
+        <div className="asa-composer__submit-row">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={submitting}
+            onClick={() => navigate(communityId ? `/communities/${communityId}` : '/', { replace: true })}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" loading={submitting} disabled={submitting || imagesUploading || !content.trim()}>
+            {imagesUploading ? 'Uploading photos…' : 'Post'}
+          </Button>
+        </div>
       </form>
-    </>
+    </div>
   )
 }

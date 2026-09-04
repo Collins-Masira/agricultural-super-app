@@ -5,6 +5,9 @@ const initialState = {
   feed: [],
   feedStatus: 'idle',
   feedError: null,
+  reels: [],
+  reelsStatus: 'idle',
+  reelsError: null,
   current: null,
   currentStatus: 'idle',
   currentError: null,
@@ -37,6 +40,30 @@ export const fetchFeed = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to load posts.')
     }
+  },
+)
+
+export const fetchReels = createAsyncThunk(
+  'posts/fetchReels',
+  async ({ page = 1, pageSize = 10 } = {}, { rejectWithValue }) => {
+    try {
+      const result = await postsService.listReels(page, pageSize)
+      return result.items
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to load reels.')
+    }
+  },
+)
+
+export const incrementView = createAsyncThunk(
+  'posts/incrementView',
+  async (postId) => {
+    try {
+      await postsService.incrementView(postId)
+    } catch {
+      // View counts are a nice-to-have, not worth surfacing an error for.
+    }
+    return postId
   },
 )
 
@@ -100,6 +127,7 @@ function findPost(state, postId) {
   return (
     (state.current?.id === postId ? state.current : null) ??
     state.feed.find((p) => p.id === postId) ??
+    state.reels.find((p) => p.id === postId) ??
     state.userPosts.find((p) => p.id === postId) ??
     state.communityPosts.find((p) => p.id === postId) ??
     state.savedPosts.find((p) => p.id === postId)
@@ -227,9 +255,9 @@ export const deletePost = createAsyncThunk(
 
 export const addComment = createAsyncThunk(
   'posts/addComment',
-  async ({ postId, content }, { rejectWithValue }) => {
+  async ({ postId, content, parentCommentId }, { rejectWithValue }) => {
     try {
-      const comment = await postsService.addComment(postId, content)
+      const comment = await postsService.addComment(postId, content, parentCommentId)
       return { postId, comment }
     } catch (error) {
       return rejectWithValue(error?.message ?? 'Failed to add comment.')
@@ -238,7 +266,7 @@ export const addComment = createAsyncThunk(
 )
 
 function everyPostList(state) {
-  return [state.feed, state.userPosts, state.communityPosts, state.savedPosts]
+  return [state.feed, state.reels, state.userPosts, state.communityPosts, state.savedPosts]
 }
 
 function forEachMatchingPost(state, postId, apply) {
@@ -278,6 +306,23 @@ const postsSlice = createSlice({
       .addCase(fetchFeed.rejected, (state, action) => {
         state.feedStatus = 'error'
         state.feedError = action.payload
+      })
+      .addCase(fetchReels.pending, (state) => {
+        state.reelsStatus = 'loading'
+        state.reelsError = null
+      })
+      .addCase(fetchReels.fulfilled, (state, action) => {
+        state.reels = action.payload
+        state.reelsStatus = 'ready'
+      })
+      .addCase(fetchReels.rejected, (state, action) => {
+        state.reelsStatus = 'error'
+        state.reelsError = action.payload
+      })
+      .addCase(incrementView.fulfilled, (state, action) => {
+        forEachMatchingPost(state, action.payload, (post) => {
+          post.viewCount += 1
+        })
       })
       .addCase(fetchPost.pending, (state) => {
         state.currentStatus = 'loading'
@@ -331,6 +376,9 @@ const postsSlice = createSlice({
       .addCase(createPost.fulfilled, (state, action) => {
         state.feed.unshift(action.payload)
         state.feedStatus = 'ready'
+        if (action.payload.videoUrl) {
+          state.reels.unshift(action.payload)
+        }
         if (action.payload.communityId && state.communityPostsCommunityId === action.payload.communityId) {
           state.communityPosts.unshift(action.payload)
         }
@@ -448,6 +496,7 @@ const postsSlice = createSlice({
       .addCase(deletePost.fulfilled, (state, action) => {
         const postId = action.payload
         state.feed = state.feed.filter((p) => p.id !== postId)
+        state.reels = state.reels.filter((p) => p.id !== postId)
         state.userPosts = state.userPosts.filter((p) => p.id !== postId)
         state.communityPosts = state.communityPosts.filter((p) => p.id !== postId)
         state.savedPosts = state.savedPosts.filter((p) => p.id !== postId)

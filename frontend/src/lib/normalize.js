@@ -60,6 +60,7 @@ export function normalizeComment(c) {
   return {
     id: c.id,
     postId: c.post_id,
+    parentCommentId: c.parent_comment_id ?? null,
     content: c.content,
     createdAt: c.created_at,
     updatedAt: c.updated_at,
@@ -72,6 +73,8 @@ export function normalizePost(p) {
     id: p.id,
     title: p.title,
     content: p.content,
+    videoUrl: p.video_url ?? null,
+    viewCount: p.view_count ?? 0,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     author: toUserProfile(p.author),
@@ -167,5 +170,19 @@ export function normalizeAIConversation(c) {
     createdAt: c.created_at,
     updatedAt: c.updated_at,
     messages: (c.messages ?? []).map(normalizeAIMessage),
+  }
+}
+
+export function normalizeNotification(n) {
+  return {
+    id: n.id,
+    type: n.type,
+    isRead: n.is_read,
+    createdAt: n.created_at,
+    postId: n.post_id ?? null,
+    commentId: n.comment_id ?? null,
+    postTitle: n.post_title ?? null,
+    isReel: n.is_reel ?? false,
+    actor: toUserProfile(n.actor),
   }
 }

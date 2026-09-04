@@ -3,6 +3,7 @@
 from app.errors import ConflictError, NotFoundError, ValidationAPIError
 from app.extensions import db
 from app.models import Profile, User, UserFollow
+from app.services import notification_service
 
 MAX_PAGE_SIZE = 100
 
@@ -98,6 +99,11 @@ def follow_user(current_user, target_user_id):
     follow = UserFollow(follower_id=current_user.id, following_id=target_user_id)
     db.session.add(follow)
     db.session.commit()
+    notification_service.create_notification(
+        recipient_id=target_user_id,
+        actor_id=current_user.id,
+        type="follow",
+    )
     return follow
 
 

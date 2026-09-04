@@ -10,6 +10,15 @@ export const postsService = {
     return { items: posts.map(normalizePost), page, pageSize }
   },
 
+  async listReels(page = 1, pageSize = 10) {
+    const posts = await httpClient.get(`/posts?has_video=true&page=${page}&per_page=${pageSize}`)
+    return { items: posts.map(normalizePost), page, pageSize }
+  },
+
+  async incrementView(postId) {
+    return httpClient.post(`/posts/${postId}/view`, {})
+  },
+
   async listCommunityPosts(communityId, page = 1, pageSize = 20) {
     const posts = await httpClient.get(`/communities/${communityId}/posts?page=${page}&per_page=${pageSize}`)
     return posts.map(normalizePost)
@@ -40,6 +49,7 @@ export const postsService = {
       images: (input.imageUrls ?? []).map((url) => ({ image_url: url })),
       community_id: input.communityId ?? undefined,
       is_announcement: input.isAnnouncement ?? undefined,
+      video_url: input.videoUrl ?? undefined,
     })
     return normalizePost(post)
   },
@@ -54,9 +64,12 @@ export const postsService = {
     return httpClient.delete(`/posts/${postId}/like`)
   },
 
-  async addComment(postId, content) {
+  async addComment(postId, content, parentCommentId) {
     if (env.useMocks) return mockPosts.addComment(postId, content)
-    const comment = await httpClient.post(`/posts/${postId}/comments`, { content })
+    const comment = await httpClient.post(`/posts/${postId}/comments`, {
+      content,
+      parent_comment_id: parentCommentId ?? undefined,
+    })
     return normalizeComment(comment)
   },
 
@@ -97,5 +110,9 @@ export const postsService = {
 
   async unrepostPost(postId) {
     return httpClient.delete(`/posts/${postId}/repost`)
+  },
+
+  async reportPost(postId, reason, details) {
+    return httpClient.post(`/posts/${postId}/report`, { reason, details: details || undefined })
   },
 }

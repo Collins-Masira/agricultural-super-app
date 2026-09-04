@@ -27,6 +27,9 @@ h1,
 h2,
 h3,
 h4 {
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
   line-height: var(--line-height-tight);
   margin: 0 0 var(--space-3);
 }

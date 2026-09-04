@@ -45,7 +45,11 @@ class Config:
     OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
-    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 5 * 1024 * 1024))  # 5MB
+    # 50MB ceiling so video uploads (up to MAX_VIDEO_SIZE_BYTES in
+    # upload_service.py) aren't rejected by Flask before reaching that
+    # validation; the image upload path still enforces its own stricter
+    # 5MB limit regardless of this global ceiling.
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 50 * 1024 * 1024))  # 50MB
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").strip().lower() in ("true", "1", "yes")

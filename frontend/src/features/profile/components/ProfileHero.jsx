@@ -2,7 +2,7 @@ import { Avatar } from '@/components/ui'
 import { VerifiedBadge } from '@/components/ui'
 import '@/features/experts/experts.css'
 
-export function ProfileHero({ profile, followersCount, actions }) {
+export function ProfileHero({ profile, followersCount, followingCount, postsCount, onFollowingClick, actions }) {
   const name =
     profile.profile.firstName && profile.profile.lastName
       ? `${profile.profile.firstName} ${profile.profile.lastName}`
@@ -28,11 +28,26 @@ export function ProfileHero({ profile, followersCount, actions }) {
           )}
           {profile.profile.bio && <p className="asa-profile-hero__bio">{profile.profile.bio}</p>}
           <div className="asa-profile-hero__stats">
+            {typeof postsCount === 'number' && (
+              <span>
+                <span className="asa-profile-hero__stat">{postsCount}</span> posts
+              </span>
+            )}
             {typeof followersCount === 'number' && (
               <span>
                 <span className="asa-profile-hero__stat">{followersCount}</span> followers
               </span>
             )}
+            {typeof followingCount === 'number' &&
+              (onFollowingClick ? (
+                <button type="button" className="asa-profile-hero__stat-btn" onClick={onFollowingClick}>
+                  <span className="asa-profile-hero__stat">{followingCount}</span> following
+                </button>
+              ) : (
+                <span>
+                  <span className="asa-profile-hero__stat">{followingCount}</span> following
+                </span>
+              ))}
             <span>
               <span className="asa-profile-hero__stat">{profile.user.role}</span>
             </span>

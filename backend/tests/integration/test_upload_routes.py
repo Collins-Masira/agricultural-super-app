@@ -121,3 +121,73 @@ class TestUploadImage:
         )
         assert profile_response.status_code == 200
         assert profile_response.get_json()["profile_image_url"] == url
+
+
+def _video_bytes(padding=200):
+    return b"\x00\x00\x00\x18ftypmp42" + b"\x00" * padding
+
+
+class TestUploadVideo:
+    def test_requires_auth(self, client):
+        response = client.post(
+            "/api/uploads/video",
+            data={"video": (io.BytesIO(_video_bytes()), "clip.mp4")},
+            content_type="multipart/form-data",
+        )
+        assert response.status_code == 401
+
+    def test_valid_mp4_upload_returns_url(self, client, amina):
+        response = client.post(
+            "/api/uploads/video",
+            headers=amina["headers"],
+            data={"video": (io.BytesIO(_video_bytes()), "clip.mp4", "video/mp4")},
+            content_type="multipart/form-data",
+        )
+        assert response.status_code == 201
+        body = response.get_json()
+        assert body["url"].startswith("http://")
+        assert body["filename"].endswith(".mp4")
+
+    def test_rejects_disguised_non_video_file(self, client, amina):
+        response = client.post(
+            "/api/uploads/video",
+            headers=amina["headers"],
+            data={"video": (io.BytesIO(b"not actually a video"), "malware.mp4", "video/mp4")},
+            content_type="multipart/form-data",
+        )
+        assert response.status_code == 422
+
+    def test_missing_file_field_returns_422(self, client, amina):
+        response = client.post(
+            "/api/uploads/video", headers=amina["headers"], data={}, content_type="multipart/form-data"
+        )
+        assert response.status_code == 422
+
+    def test_uploaded_video_is_immediately_retrievable(self, client, amina):
+        upload_response = client.post(
+            "/api/uploads/video",
+            headers=amina["headers"],
+            data={"video": (io.BytesIO(_video_bytes()), "clip.mp4", "video/mp4")},
+            content_type="multipart/form-data",
+        )
+        filename = upload_response.get_json()["filename"]
+
+        get_response = client.get(f"/api/uploads/{filename}")
+        assert get_response.status_code == 200
+
+    def test_uploaded_video_can_become_a_reel(self, client, amina):
+        upload_response = client.post(
+            "/api/uploads/video",
+            headers=amina["headers"],
+            data={"video": (io.BytesIO(_video_bytes()), "clip.mp4", "video/mp4")},
+            content_type="multipart/form-data",
+        )
+        url = upload_response.get_json()["url"]
+
+        post_response = client.post(
+            "/api/posts",
+            headers=amina["headers"],
+            json={"title": "How I control fall armyworm", "content": "c", "video_url": url},
+        )
+        assert post_response.status_code == 201
+        assert post_response.get_json()["video_url"] == url

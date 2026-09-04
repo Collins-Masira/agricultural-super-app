@@ -3,13 +3,8 @@ import { Button, Textarea } from '@/components/ui'
 import { errorMessage } from '@/features/auth/AuthContext'
 import { createPost } from '@/store/slices/postsSlice'
 import { useAppDispatch } from '@/store/hooks'
+import { deriveTitle } from '@/lib/format'
 import './posts.css'
-
-function deriveTitle(content) {
-  const trimmed = content.trim()
-  if (trimmed.length <= 60) return trimmed
-  return `${trimmed.slice(0, 57).trimEnd()}...`
-}
 
 export function QuickComposer({ communityId, placeholder = "What's on your mind?", allowAnnouncement = false, onPosted }) {
   const dispatch = useAppDispatch()
