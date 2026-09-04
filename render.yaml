@@ -1,53 +1,3 @@
-# render.yaml
-#
-# Render Blueprint for the Agricultural Super App: a Flask/SQLAlchemy
-# backend (backend/), a React/Vite static frontend (frontend/), a
-# managed Postgres database, and a scheduled cleanup job for expired
-# Stories.
-#
-# Commands below are taken directly from this repo, not guessed:
-#   - Backend prod server: gunicorn (added to backend/requirements.txt),
-#     entry point backend/wsgi.py -> `app` (see that file's own docstring).
-#   - Backend deps: backend/requirements.txt (NOT requirements-dev.txt --
-#     that pulls in pytest/coverage, which have no place in production).
-#   - Backend migrations: `flask db upgrade` (Flask-Migrate/Alembic,
-#     see backend/migrations/). Never db.create_all()/db.drop_all().
-#   - Frontend build: `npm ci && npm run build` (see frontend/package.json),
-#     static output in frontend/dist (Vite's default outDir -- unconfigured
-#     in frontend/vite.config.js).
-#   - Story cleanup: backend/scripts/cleanup_expired_stories.py. This is
-#     HOUSEKEEPING ONLY -- expiration itself is enforced on every read by
-#     app/services/story_service.py (`expires_at > now`), independent of
-#     whether this cron job runs, runs late, or never runs at all.
-#
-# Deploys from `branch: feature/Evans` (the branch this was built on) on
-# every service below, per instructions -- change it, or remove the key
-# to fall back to each service's default branch, whenever that's no
-# longer the branch you want deployed. This file does NOT merge or push
-# anything by itself; connecting it to Render and triggering the first
-# deploy is a separate, deliberate step for you to take.
-#
-# IMPORTANT -- upload storage caveat (see docs/TECHNICAL_DEBT.md-style
-# note): this app currently stores uploaded post/profile/story images on
-# local disk (UPLOAD_FOLDER), served back via GET /api/uploads/<file>.
-# A Render "web" service's local filesystem is EPHEMERAL -- it is wiped
-# on every deploy and on most restarts. Left as-is, every previously
-# uploaded image (not just Stories -- this affects Posts and profile
-# photos too, since they already share the same upload_service.py) would
-# 404 after the next deploy. This predates Stories; Stories does not fix
-# or worsen it, it just inherits it by reusing the existing upload
-# system rather than inventing a second one.
-#
-# The commented-out `disk:` block on agricultural-backend below is the
-# smallest fix that needs no code or architecture change: a Render
-# persistent Disk mounted at the same path as UPLOAD_FOLDER. It is
-# commented out because Render Disks require a paid instance plan (not
-# available on `plan: free`) and pin the service to a single instance
-# (no horizontal scaling) -- a cost/scaling tradeoff only you should
-# decide on, not something to silently opt you into. Uncomment it (and
-# bump `plan:` on that service to a paid tier) before relying on uploads
-# surviving a redeploy in production.
-
 services:
   - type: web
     name: agricultural-backend
@@ -74,22 +24,10 @@ services:
         fromDatabase:
           name: agricultural-db
           property: connectionString
-      # Real production origin(s) of the deployed frontend, comma-
-      # separated (e.g. https://agricultural-frontend.onrender.com).
-      # Only known after the frontend's first deploy -- set manually
-      # rather than guessed, and never left open to "*" in production.
       - key: CORS_ORIGINS
         sync: false
-      # Same reason as CORS_ORIGINS: the frontend's real URL, used to
-      # build links in outgoing emails (password reset, admin
-      # notifications).
       - key: FRONTEND_URL
         sync: false
-      # Left unset on purpose: app/__init__.py then falls back to
-      # Flask's own instance_path (backend/instance/uploads, same as
-      # local dev) -- ephemeral on Render's web service filesystem, per
-      # the storage caveat above. Only set this if the commented-out
-      # `disk:` block below is uncommented, to the disk's mountPath.
       - key: MAX_CONTENT_LENGTH
         value: "52428800"
       # AI Farming Assistant: AI_PROVIDER=ollama (the local default) has
