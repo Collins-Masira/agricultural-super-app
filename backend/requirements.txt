@@ -13,6 +13,10 @@ flasgger==0.9.7.1
 # access tokens in app/auth/jwt.py.
 PyJWT==2.7.0
 
+# Flask-JWT-Extended: alternative JWT implementation used by Collins'
+# route files (app/routes/auth.py, etc.).
+Flask-JWT-Extended==4.6.0
+
 # CORS: required for the separate ReactJS/Redux SPA to call this API
 # from the browser at all.
 Flask-Cors==6.0.5

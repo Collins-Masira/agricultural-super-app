@@ -3,18 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Avatar, Badge, Button, EmptyState, ErrorState, LoadingState, Tabs, VerifiedBadge } from '@/components/ui'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import {
-  fetchCommunity,
-  removeCommunityMember,
-  setMemberRole,
-  toggleMembership,
-} from '@/store/slices/communitiesSlice'
-import { fetchCommunityPosts } from '@/store/slices/postsSlice'
-import { PostCard } from '@/features/posts/components/PostCard'
-import { QuickComposer } from '@/features/posts/components/QuickComposer'
-import { formatDate } from '@/lib/format'
-import { canPostInCommunity } from '../permissions'
-import { CommunitySettingsModal } from '../components/CommunitySettingsModal'
+import { fetchCommunity, toggleMembership } from '@/store/slices/communitiesSlice'
 import '../communities.css'
 
 const TABS = [
@@ -36,11 +25,6 @@ export function CommunityDetailPage() {
   const status = useAppSelector((state) => state.communities.currentStatus)
   const error = useAppSelector((state) => state.communities.currentError)
   const loading = useAppSelector((state) => state.communities.membershipLoadingId === Number(communityId))
-  const memberActionLoadingUserId = useAppSelector((state) => state.communities.memberActionLoadingUserId)
-
-  const posts = useAppSelector((state) => state.posts.communityPosts)
-  const postsStatus = useAppSelector((state) => state.posts.communityPostsStatus)
-  const postsError = useAppSelector((state) => state.posts.communityPostsError)
 
   useEffect(() => {
     if (communityId) dispatch(fetchCommunity(Number(communityId)))
@@ -57,22 +41,10 @@ export function CommunityDetailPage() {
 
   const isMember = community.members.some((m) => m.userId === user?.user.id)
   const isCreator = community.createdBy === user?.user.id
-  const isAdmin = community.myRole === 'admin'
-  const userRole = user?.user.role
-  const allowedToPost = isMember && canPostInCommunity(community, userRole)
-  const announcements = posts.filter((post) => post.isAnnouncement)
 
   function handleToggleMembership() {
     if (loading) return
     dispatch(toggleMembership({ communityId: community.id, userId: user.user.id }))
-  }
-
-  function handleSetRole(targetUserId, role) {
-    dispatch(setMemberRole({ communityId: community.id, userId: targetUserId, role }))
-  }
-
-  function handleRemoveMember(targetUserId) {
-    dispatch(removeCommunityMember({ communityId: community.id, userId: targetUserId }))
   }
 
   return (
@@ -94,23 +66,11 @@ export function CommunityDetailPage() {
               {community.creator?.profile.firstName || community.creator?.user.username}
             </p>
           </div>
-          <div className="asa-community-hero__actions">
-            {isAdmin && (
-              <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
-                Community Settings
-              </Button>
-            )}
-            {!isCreator && (
-              <Button
-                variant={isMember ? 'secondary' : 'primary'}
-                onClick={handleToggleMembership}
-                loading={loading}
-                aria-pressed={isMember}
-              >
-                {isMember ? 'Leave community' : 'Join community'}
-              </Button>
-            )}
-          </div>
+          {!isCreator && (
+            <Button variant={isMember ? 'secondary' : 'primary'} onClick={handleToggle} loading={loading} aria-pressed={isMember}>
+              {isMember ? 'Leave community' : 'Join community'}
+            </Button>
+          )}
         </div>
         {community.description && <p>{community.description}</p>}
       </section>

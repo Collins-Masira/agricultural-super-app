@@ -1,8 +1,6 @@
 from app.errors import ConflictError, ForbiddenError, NotFoundError, ValidationAPIError
 from app.extensions import db
 from app.models import Community, CommunityMember
-from app.models.community import COMMUNITY_PERMISSION_LEVELS
-from app.models.community_member import COMMUNITY_MEMBER_ROLES
 
 MAX_PAGE_SIZE = 100
 
@@ -67,15 +65,37 @@ def get_community_or_404(community_id):
     return community
 
 
-def list_communities(page=1, per_page=20):
+def _annotate_follow_status(communities, current_user):
+    """Set is_following on each community for the given user."""
+    if current_user is None:
+        for c in communities:
+            c.is_following = False
+        return
+    if not communities:
+        return
+    community_ids = [c.id for c in communities]
+    followed_ids = {
+        row.community_id
+        for row in db.session.query(CommunityFollow.community_id).filter(
+            CommunityFollow.user_id == current_user.id,
+            CommunityFollow.community_id.in_(community_ids),
+        ).all()
+    }
+    for c in communities:
+        c.is_following = c.id in followed_ids
+
+
+def list_communities(page=1, per_page=20, current_user=None):
     per_page = min(per_page, MAX_PAGE_SIZE)
-    return (
+    communities = (
         db.session.query(Community)
         .order_by(Community.created_at.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
         .all()
     )
+    _annotate_follow_status(communities, current_user)
+    return communities
 
 
 def create_community(current_user, data):
@@ -138,40 +158,6 @@ def leave_community(current_user, community_id):
     membership = get_membership(current_user.id, community_id)
     if membership is None:
         raise NotFoundError("You are not a member of this community.")
-
-    db.session.delete(membership)
-    db.session.commit()
-
-
-def set_member_role(current_user, community_id, target_user_id, role):
-    if role not in COMMUNITY_MEMBER_ROLES:
-        raise ValidationAPIError(f"role must be one of: {', '.join(COMMUNITY_MEMBER_ROLES)}.")
-
-    community = get_community_or_404(community_id)
-    _assert_community_admin(current_user, community)
-
-    if target_user_id == community.created_by:
-        raise ForbiddenError("The community creator's role cannot be changed.")
-
-    membership = get_membership(target_user_id, community_id)
-    if membership is None:
-        raise NotFoundError("This user is not a member of this community.")
-
-    membership.role = role
-    db.session.commit()
-    return membership
-
-
-def remove_member(current_user, community_id, target_user_id):
-    community = get_community_or_404(community_id)
-    _assert_community_admin(current_user, community)
-
-    if target_user_id == community.created_by:
-        raise ForbiddenError("The community creator cannot be removed.")
-
-    membership = get_membership(target_user_id, community_id)
-    if membership is None:
-        raise NotFoundError("This user is not a member of this community.")
 
     db.session.delete(membership)
     db.session.commit()

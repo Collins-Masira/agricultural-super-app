@@ -8,7 +8,7 @@ class CommunityMemberSchema(ma.Schema):
     class Meta:
         unknown = EXCLUDE
 
-       id = fields.Integer(dump_only=True)
+    id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
     community_id = fields.Integer(dump_only=True)
     role = fields.String(dump_only=True)

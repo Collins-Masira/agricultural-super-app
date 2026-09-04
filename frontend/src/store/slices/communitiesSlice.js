@@ -11,9 +11,6 @@ const initialState = {
   createStatus: 'idle',
   createError: null,
   membershipLoadingId: null,
-  settingsStatus: 'idle',
-  settingsError: null,
-  memberActionLoadingUserId: null,
 }
 
 export const fetchCommunities = createAsyncThunk(
@@ -143,6 +140,28 @@ function applyMemberRemoval(community, { userId }) {
   community.members = community.members.filter((m) => m.userId !== userId)
 }
 
+export const toggleCommunityFollow = createAsyncThunk(
+  'communities/toggleCommunityFollow',
+  async ({ communityId, userId }, { getState, rejectWithValue }) => {
+    const state = getState().communities
+    const community =
+      (state.current?.id === communityId ? state.current : null) ??
+      state.list.find((c) => c.id === communityId)
+    const wasFollowing = community?.isFollowing ?? false
+
+    try {
+      if (wasFollowing) {
+        await communitiesService.unfollowCommunity(communityId)
+      } else {
+        await communitiesService.followCommunity(communityId)
+      }
+      return { communityId, wasFollowing }
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Failed to update follow status.')
+    }
+  },
+)
+
 const communitiesSlice = createSlice({
   name: 'communities',
   initialState,
@@ -198,46 +217,6 @@ const communitiesSlice = createSlice({
       })
       .addCase(toggleMembership.rejected, (state) => {
         state.membershipLoadingId = null
-      })
-      .addCase(updateCommunitySettings.pending, (state) => {
-        state.settingsStatus = 'loading'
-        state.settingsError = null
-      })
-      .addCase(updateCommunitySettings.fulfilled, (state, action) => {
-        state.settingsStatus = 'ready'
-        if (state.current?.id === action.payload.id) {
-          state.current = { ...state.current, ...action.payload }
-        }
-        const listIndex = state.list.findIndex((c) => c.id === action.payload.id)
-        if (listIndex !== -1) state.list[listIndex] = { ...state.list[listIndex], ...action.payload }
-      })
-      .addCase(updateCommunitySettings.rejected, (state, action) => {
-        state.settingsStatus = 'error'
-        state.settingsError = action.payload
-      })
-      .addCase(setMemberRole.pending, (state, action) => {
-        state.memberActionLoadingUserId = action.meta.arg.userId
-      })
-      .addCase(setMemberRole.fulfilled, (state, action) => {
-        if (state.current?.id === action.payload.communityId) {
-          applyMemberRoleChange(state.current, action.payload)
-        }
-        state.memberActionLoadingUserId = null
-      })
-      .addCase(setMemberRole.rejected, (state) => {
-        state.memberActionLoadingUserId = null
-      })
-      .addCase(removeCommunityMember.pending, (state, action) => {
-        state.memberActionLoadingUserId = action.meta.arg.userId
-      })
-      .addCase(removeCommunityMember.fulfilled, (state, action) => {
-        if (state.current?.id === action.payload.communityId) {
-          applyMemberRemoval(state.current, action.payload)
-        }
-        state.memberActionLoadingUserId = null
-      })
-      .addCase(removeCommunityMember.rejected, (state) => {
-        state.memberActionLoadingUserId = null
       })
   },
 })

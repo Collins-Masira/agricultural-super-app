@@ -58,8 +58,6 @@ def create_app(config_name=None):
 
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
-    Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
-
     register_error_handlers(app)
     register_blueprints(app)
 

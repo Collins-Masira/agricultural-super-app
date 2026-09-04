@@ -115,10 +115,6 @@ export function normalizeCommunity(c) {
     updatedAt: c.updated_at,
     creator: toUserProfile(c.creator),
     members: (c.members ?? []).map(normalizeMembership),
-    postingPermission: c.posting_permission ?? 'everyone',
-    messagingPermission: c.messaging_permission ?? 'everyone',
-    commentsEnabled: c.comments_enabled ?? true,
-    myRole: c.my_role ?? null,
   }
 }
 

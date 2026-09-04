@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify, request
 
-from app.auth.decorators import get_current_user, jwt_required, optional_jwt
-from app.errors import ValidationAPIError
-from app.schemas import CommunitySchema, PostSchema, community_schema
-from app.services import community_service, post_service
+from app.auth.decorators import get_current_user, jwt_required
+from app.schemas import communities_schema, community_schema
+from app.services import community_service
 
 communities_bp = Blueprint("communities", __name__, url_prefix="/api/communities")
 
@@ -50,7 +49,7 @@ def list_communities():
     page = request.args.get("page", default=1, type=int)
     per_page = request.args.get("per_page", default=20, type=int)
     communities = community_service.list_communities(page=page, per_page=per_page)
-    return jsonify(_dump_community_for_viewer(communities, many=True)), 200
+    return jsonify(communities_schema.dump(communities)), 200
 
 
 @communities_bp.post("")
@@ -131,7 +130,7 @@ def get_community(community_id):
           $ref: '#/definitions/Error'
     """
     community = community_service.get_community_or_404(community_id)
-    return jsonify(_dump_community_for_viewer(community)), 200
+    return jsonify(community_schema.dump(community)), 200
 
 
 @communities_bp.put("/<int:community_id>")
@@ -287,136 +286,3 @@ def leave_community(community_id):
     """
     community_service.leave_community(get_current_user(), community_id)
     return "", 204
-
-
-@communities_bp.patch("/<int:community_id>/members/<int:user_id>")
-@jwt_required
-def update_member_role(community_id, user_id):
-    """
-    Promote/demote a community member. Community admin only.
-    ---
-    tags:
-      - Communities
-    security:
-      - BearerAuth: []
-    parameters:
-      - in: path
-        name: community_id
-        type: integer
-        required: true
-      - in: path
-        name: user_id
-        type: integer
-        required: true
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required: [role]
-          properties:
-            role:
-              type: string
-              enum: [member, admin]
-    responses:
-      200:
-        description: Role updated.
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-      403:
-        description: Not a community admin, or target is the community's creator.
-        schema:
-          $ref: '#/definitions/Error'
-      404:
-        description: Community not found, or target is not a member.
-        schema:
-          $ref: '#/definitions/Error'
-      422:
-        description: role is required or invalid.
-        schema:
-          $ref: '#/definitions/Error'
-    """
-    payload = request.get_json(silent=True) or {}
-    role = payload.get("role")
-    if not role:
-        raise ValidationAPIError("role is required.")
-    community_service.set_member_role(get_current_user(), community_id, user_id, role)
-    return jsonify({"message": "Member role updated."}), 200
-
-
-@communities_bp.delete("/<int:community_id>/members/<int:user_id>")
-@jwt_required
-def remove_member(community_id, user_id):
-    """
-    Remove a member from a community. Community admin only.
-    ---
-    tags:
-      - Communities
-    security:
-      - BearerAuth: []
-    parameters:
-      - in: path
-        name: community_id
-        type: integer
-        required: true
-      - in: path
-        name: user_id
-        type: integer
-        required: true
-    responses:
-      204:
-        description: Member removed.
-      403:
-        description: Not a community admin, or target is the community's creator.
-        schema:
-          $ref: '#/definitions/Error'
-      404:
-        description: Community not found, or target is not a member.
-        schema:
-          $ref: '#/definitions/Error'
-    """
-    community_service.remove_member(get_current_user(), community_id, user_id)
-    return "", 204
-
-
-@communities_bp.get("/<int:community_id>/posts")
-@optional_jwt
-def list_community_posts(community_id):
-    """
-    List a community's posts, newest first.
-    ---
-    tags:
-      - Communities
-    parameters:
-      - in: path
-        name: community_id
-        type: integer
-        required: true
-      - in: query
-        name: page
-        type: integer
-        default: 1
-      - in: query
-        name: per_page
-        type: integer
-        default: 20
-    responses:
-      200:
-        description: A page of the community's posts.
-        schema:
-          type: array
-          items:
-            $ref: '#/definitions/Post'
-      404:
-        description: Community not found.
-        schema:
-          $ref: '#/definitions/Error'
-    """
-    community_service.get_community_or_404(community_id)
-    page = request.args.get("page", default=1, type=int)
-    per_page = request.args.get("per_page", default=20, type=int)
-    posts = post_service.list_posts(page=page, per_page=per_page, community_id=community_id)
-    return jsonify(_dump_posts_for_viewer(posts)), 200
