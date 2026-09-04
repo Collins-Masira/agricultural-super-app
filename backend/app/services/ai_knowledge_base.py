@@ -101,7 +101,7 @@ GUIDANCE_GROUPS = [
     ("maize|corn|top.?dress|knee.?height|armyworm|stalk borer", ("Maize guidance:", MAIZE_GUIDANCE), FOOD_CROP_GUIDANCE),
     ("soil|ph|lime|compost|manure|nutrient|fertilit", ("Soil guidance:", SOIL_GUIDANCE), FOOD_CROP_GUIDANCE),
     ("pest|insect|spray|pesticide|herbicide|fungicide|worm", ("Pest control guidance:", PEST_CONTROL_GUIDANCE), FOOD_CROP_GUIDANCE),
-    ("fertiliz|n-\s*p-\s*k|n.p.k|npk|urea|nitrogen|phosphor|potassium", ("Fertilizer guidance:", FERTILIZER_GUIDANCE), FOOD_CROP_GUIDANCE),
+    ("fertiliz|n-\\s*p-\\s*k|n.p.k|npk|urea|nitrogen|phosphor|potassium", ("Fertilizer guidance:", FERTILIZER_GUIDANCE), FOOD_CROP_GUIDANCE),
     ("cattle|cow|livestock|veterinar|mastitis|vaccinat|deworm", ("Cattle/livestock guidance:", CATTLE_GUIDANCE), LIVESTOCK_GUIDANCE),
     ("water|irrigat|drip|mulch|drainage|rainwater|waterlog", ("Water and irrigation guidance:", WATER_IRRIGATION_GUIDANCE), FOOD_CROP_GUIDANCE),
     ("weather|rain|drought|dry.?spell|climate|season", ("Weather guidance:", CLIMATE_WEATHER_GUIDANCE), FOOD_CROP_GUIDANCE),
