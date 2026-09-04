@@ -260,30 +260,49 @@ export const mockSession = {
   },
 }
 
+function enrichCommunity(c) {
+  const creatorUser = users.find((u) => u.id === c.createdBy)
+  return {
+    ...c,
+    creator: creatorUser ? toProfile(creatorUser) : null,
+    memberCount: c.members.length,
+    members: c.members.map((m) => ({
+      ...m,
+      member: users.find((u) => u.id === m.userId) ? toProfile(users.find((u) => u.id === m.userId)) : null,
+    })),
+  }
+}
+
 export const mockCommunities = {
-  async listCommunities() {
-    return delay(seedCommunities.map((c) => ({
-      ...c,
-      memberCount: c.members.length,
-    })))
+  async listCommunities(page = 1, pageSize = 20) {
+    const items = seedCommunities.map(enrichCommunity)
+    const start = (page - 1) * pageSize
+    return delay({
+      items: items.slice(start, start + pageSize),
+      page,
+      pageSize,
+      total: items.length,
+    })
   },
 
   async getCommunity(communityId) {
     const community = seedCommunities.find((c) => c.id === communityId)
     if (!community) fail('Community not found.', 404)
-    return delay({ ...community, memberCount: community.members.length })
+    return delay(enrichCommunity(community))
   },
 
   async createCommunity(input) {
     if (!input.name?.trim()) fail('Community name is required.')
     const id = Math.max(...seedCommunities.map((c) => c.id), 0) + 1
+    const creatorUser = users.find((u) => u.id === currentUserId)
     const community = {
       id,
       name: input.name.trim(),
       description: input.description ?? null,
       imageUrl: input.imageUrl ?? null,
       createdBy: currentUserId,
-      members: [{ id, userId: currentUserId, communityId: id, joinedAt: new Date().toISOString() }],
+      creator: creatorUser ? toProfile(creatorUser) : null,
+      members: [{ id, userId: currentUserId, communityId: id, joinedAt: new Date().toISOString(), member: creatorUser ? toProfile(creatorUser) : null }],
       isMember: true,
       isFollowing: true,
       memberCount: 1,
@@ -328,14 +347,18 @@ export const mockMessaging = {
       c.participants.some((p) => p.userId === currentUserId)
     )
     return delay(convs.map((c) => {
-      const allMsgs = seedMessages.filter((m) => m.conversationId === c.id)
-      const lastMsg = allMsgs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+      const allMsgs = seedMessages
+        .filter((m) => m.conversationId === c.id)
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((m) => ({
+          ...m,
+          sender: toProfile(users.find((u) => u.id === m.senderId)),
+        }))
+      const lastMsg = allMsgs[allMsgs.length - 1] ?? null
       return {
         ...c,
-        lastMessage: lastMsg ? {
-          ...lastMsg,
-          sender: toProfile(users.find((u) => u.id === lastMsg.senderId)),
-        } : null,
+        messages: allMsgs,
+        lastMessage: lastMsg,
         participants: c.participants.map((p) => ({
           ...p,
           participant: toProfile(users.find((u) => u.id === p.userId)),
@@ -367,6 +390,7 @@ export const mockMessaging = {
         { id: Date.now(), conversationId: id, userId: currentUserId, joinedAt: new Date().toISOString() },
         { id: Date.now() + 1, conversationId: id, userId: targetUserId, joinedAt: new Date().toISOString() },
       ],
+      messages: [],
       lastMessage: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

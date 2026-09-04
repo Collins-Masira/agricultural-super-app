@@ -104,7 +104,7 @@ def main():
     banner("Register two users: Amina (farmer) and Brian (expert)")
     r = requests.post(
         f"{BASE_URL}/api/auth/register",
-        json={"username": "amina_demo", "email": "amina_demo@example.com", "password": "supersecret123"},
+        json={"username": "amina_demo", "email": "amina_demo@example.com", "password": "Supersecret123!"},
     )
     show("POST", "/api/auth/register", r, note="(Amina, default role)")
     check("Amina registered", r.status_code == 201)
@@ -118,7 +118,7 @@ def main():
         json={
             "username": "brian_demo",
             "email": "brian_demo@example.com",
-            "password": "anothersecret123",
+            "password": "Anothersecret123!",
             "role": "expert",
         },
     )
@@ -135,7 +135,7 @@ def main():
         json={
             "username": "hacker_demo",
             "email": "hacker_demo@example.com",
-            "password": "hackerpass123",
+            "password": "Hackerpass123!",
             "role": "admin",
         },
     )

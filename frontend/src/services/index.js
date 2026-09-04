@@ -7,4 +7,4 @@ export { messagesService } from './messages.service'
 export { aiService } from './ai.service'
 export { adminService } from './admin.service'
 export { uploadsService } from './uploads.service'
-export { messagingService } from './messaging.service'
+
