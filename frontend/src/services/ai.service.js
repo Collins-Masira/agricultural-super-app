@@ -79,6 +79,7 @@ export const aiService = {
     const decoder = new TextDecoder()
     let buffer = ''
 
+    // eslint-disable-next-line no-constant-condition -- reads the SSE stream until done
     while (true) {
       const { done, value } = await reader.read()
       if (done) break

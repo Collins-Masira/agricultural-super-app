@@ -1,6 +1,6 @@
 # app/errors.py
 
-from flask import jsonify
+from flask import current_app, jsonify
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 
@@ -125,7 +125,14 @@ def register_error_handlers(app):
     def handle_413(err):
         return jsonify({"error": "The uploaded file is too large."}), 413
 
+    @app.errorhandler(429)
+    def handle_429(err):
+        return jsonify({"error": "Too many requests. Please slow down and try again."}), 429
+
     @app.errorhandler(500)
     def handle_500(err):
         db.session.rollback()
+        current_app.logger.error(
+            "Unhandled server error: %s: %s", type(err).__name__, err,
+        )
         return jsonify({"error": "An unexpected server error occurred."}), 500

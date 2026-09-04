@@ -1,13 +1,13 @@
 import os
 
 from flasgger import Swagger
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
 from app.config import get_config
 from app.docs import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 from app.errors import register_error_handlers
-from app.extensions import db, ma, mail, migrate
+from app.extensions import db, limiter, ma, mail, migrate
 from app.routes import register_blueprints
 
 _INSECURE_DEFAULTS = {
@@ -55,6 +55,7 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     ma.init_app(app)
     mail.init_app(app)
+    limiter.init_app(app)
 
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
@@ -65,6 +66,21 @@ def create_app(config_name=None):
 
     register_error_handlers(app)
     register_blueprints(app)
+
+    @app.after_request
+    def add_security_headers(response):
+        """Sets safe defaults on every response: no-sniff content-type,
+        deny framing, and a conservative referrer policy. HSTS is only
+        added when the request is over HTTPS (so local HTTP dev isn't
+        locked out)."""
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        if request.is_secure:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+        return response
 
     @app.get("/health")
     def health_check():

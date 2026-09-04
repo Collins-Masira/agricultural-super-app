@@ -2,7 +2,9 @@
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from app.extensions import utcnow
 
 from flask import current_app
 
@@ -140,7 +142,7 @@ def request_password_reset(email):
 
     raw_token = secrets.token_urlsafe(32)
     expires_in_seconds = current_app.config["PASSWORD_RESET_TOKEN_EXPIRES_SECONDS"]
-    expires_at = datetime.utcnow() + timedelta(seconds=expires_in_seconds)
+    expires_at = utcnow() + timedelta(seconds=expires_in_seconds)
     db.session.add(
         PasswordResetToken(
             user_id=user.id,
@@ -195,13 +197,13 @@ def reset_password(raw_token, new_password):
     if (
         record is None
         or record.used_at is not None
-        or record.expires_at < datetime.utcnow()
+        or record.expires_at < utcnow()
     ):
         raise ValidationAPIError("This password reset link is invalid or has expired.")
 
     user = db.session.get(User, record.user_id)
     user.set_password(new_password)
-    record.used_at = datetime.utcnow()
+    record.used_at = utcnow()
     db.session.commit()
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 COMMUNITY_PERMISSION_LEVELS = ("everyone", "experts_only", "admins_only")
@@ -55,14 +55,14 @@ class Community(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False
     )
 

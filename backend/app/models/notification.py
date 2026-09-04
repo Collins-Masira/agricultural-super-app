@@ -1,6 +1,6 @@
 # app/models/notification.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 NOTIFICATION_TYPES = ("post_like", "post_comment", "follow", "comment_reply")
@@ -52,7 +52,7 @@ class Notification(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 

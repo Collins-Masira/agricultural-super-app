@@ -11,8 +11,6 @@ already exist: aggregate stats, user search/listing, and account
 status/role management.
 """
 
-from datetime import datetime, timedelta
-
 from app.errors import ForbiddenError, NotFoundError, ValidationAPIError
 from app.extensions import db
 from app.models import (

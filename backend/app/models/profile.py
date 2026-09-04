@@ -1,6 +1,6 @@
 # app/models/profile.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 
@@ -50,14 +50,14 @@ class Profile(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False
     )
 

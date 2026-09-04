@@ -1,6 +1,6 @@
 # app/models/password_reset_token.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 
@@ -28,6 +28,6 @@ class PasswordResetToken(db.Model):
 
     used_at = db.Column(db.DateTime, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
     user = db.relationship("User")

@@ -14,7 +14,9 @@ export const env = {
 
   /**
    * When true, the service layer uses the isolated in-repo mock data instead
-   * of real HTTP calls. Flip off once the backend API is available.
+   * of real HTTP calls. Defaults to false so a production build talks to the
+   * real backend out of the box. Flip on (VITE_USE_MOCKS=true) for frontend
+   * development without a running API.
    */
-  useMocks: readBool(import.meta.env.VITE_USE_MOCKS, true),
+  useMocks: readBool(import.meta.env.VITE_USE_MOCKS, false),
 }

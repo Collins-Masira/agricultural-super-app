@@ -1,6 +1,6 @@
 # app/services/message_service.py
 
-from datetime import datetime
+from app.extensions import utcnow
 
 from app.errors import ForbiddenError, NotFoundError, ValidationAPIError
 from app.extensions import db
@@ -90,7 +90,7 @@ def send_message(current_user, conversation_id, content):
     # naturally sort by "most recently active" -- without this, a
     # conversation with new messages wouldn't rise to the top of
     # list_conversations()'s ordering.
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = utcnow()
 
     db.session.commit()
     return message

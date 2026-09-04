@@ -11,20 +11,39 @@ export const postsService = {
   },
 
   async listReels(page = 1, pageSize = 10) {
+    if (env.useMocks) {
+      const all = await mockPosts.listPosts(1, 1000)
+      const reels = all.items.filter((p) => p.videoUrl)
+      const start = (page - 1) * pageSize
+      return { items: reels.slice(start, start + pageSize), page, pageSize, total: reels.length }
+    }
     const posts = await httpClient.get(`/posts?has_video=true&page=${page}&per_page=${pageSize}`)
     return { items: posts.map(normalizePost), page, pageSize }
   },
 
   async incrementView(postId) {
+    if (env.useMocks) return { postId, views: 0 }
     return httpClient.post(`/posts/${postId}/view`, {})
   },
 
   async listCommunityPosts(communityId, page = 1, pageSize = 20) {
+    if (env.useMocks) {
+      const all = await mockPosts.listPosts(1, 1000)
+      const items = all.items.filter((p) => p.communityId === communityId)
+      const start = (page - 1) * pageSize
+      return items.slice(start, start + pageSize)
+    }
     const posts = await httpClient.get(`/communities/${communityId}/posts?page=${page}&per_page=${pageSize}`)
     return posts.map(normalizePost)
   },
 
   async listSavedPosts(page = 1, pageSize = 20) {
+    if (env.useMocks) {
+      const all = await mockPosts.listPosts(1, 1000)
+      const items = all.items.filter((p) => p.savedByMe)
+      const start = (page - 1) * pageSize
+      return items.slice(start, start + pageSize)
+    }
     const posts = await httpClient.get(`/posts/saved?page=${page}&per_page=${pageSize}`)
     return posts.map(normalizePost)
   },
@@ -88,31 +107,38 @@ export const postsService = {
   },
 
   async setReaction(postId, reactionType) {
+    if (env.useMocks) return { postId, reactionType, likedByMe: true }
     return httpClient.post(`/posts/${postId}/reactions`, { reaction_type: reactionType })
   },
 
   async removeReaction(postId) {
+    if (env.useMocks) return { postId, likedByMe: false }
     return httpClient.delete(`/posts/${postId}/reactions`)
   },
 
   async savePost(postId) {
+    if (env.useMocks) return { postId, savedByMe: true }
     return httpClient.post(`/posts/${postId}/save`, {})
   },
 
   async unsavePost(postId) {
+    if (env.useMocks) return { postId, savedByMe: false }
     return httpClient.delete(`/posts/${postId}/save`)
   },
 
   async repostPost(postId, content) {
+    if (env.useMocks) return { postId, repostedByMe: true, repostCount: 1 }
     const post = await httpClient.post(`/posts/${postId}/repost`, { content: content || undefined })
     return normalizePost(post)
   },
 
   async unrepostPost(postId) {
+    if (env.useMocks) return { postId, repostedByMe: false, repostCount: 0 }
     return httpClient.delete(`/posts/${postId}/repost`)
   },
 
   async reportPost(postId, reason, details) {
+    if (env.useMocks) return { postId, status: 'submitted' }
     return httpClient.post(`/posts/${postId}/report`, { reason, details: details || undefined })
   },
 }

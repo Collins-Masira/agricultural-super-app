@@ -1,6 +1,6 @@
 # app/models/user.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
@@ -40,13 +40,13 @@ class User(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=utcnow
     )
 
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        default=utcnow,
+        onupdate=utcnow
     )
 
     # -------------------------

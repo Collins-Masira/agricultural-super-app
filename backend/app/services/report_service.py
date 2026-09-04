@@ -1,6 +1,6 @@
 # app/services/report_service.py
 
-from datetime import datetime
+from app.extensions import utcnow
 
 from app.errors import ConflictError, NotFoundError, ValidationAPIError
 from app.extensions import db
@@ -66,7 +66,7 @@ def review_report(admin, report_id, status):
 
     report = _get_report_or_404(report_id)
     report.status = status
-    report.reviewed_at = datetime.utcnow()
+    report.reviewed_at = utcnow()
     report.reviewed_by_id = admin.id
     db.session.commit()
     return report

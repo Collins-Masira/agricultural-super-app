@@ -28,13 +28,26 @@ class Config:
 
     CORS_ORIGINS = [
         origin.strip()
-        for origin in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+        for origin in os.environ.get(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost",
+        ).split(",")
         if origin.strip()
     ]
 
     JSON_SORT_KEYS = False
 
     FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+    # Rate limiter storage. Production deployments should point this at a
+    # Redis instance (the default docker-compose setup exposes redis://).
+    # Falls back to an in-memory store, which is fine for single-process
+    # dev/test but not for horizontally-scaled production.
+    RATELIMIT_STORAGE_URI = os.environ.get(
+        "RATELIMIT_STORAGE_URI", "memory://"
+    )
+    RATELIMIT_STRATEGY = "fixed-window"
+    RATELIMIT_HEADERS_ENABLED = True
 
     PASSWORD_RESET_TOKEN_EXPIRES_SECONDS = int(
         os.environ.get("PASSWORD_RESET_TOKEN_EXPIRES_SECONDS", 60 * 60)  # 1h
@@ -83,6 +96,7 @@ class TestingConfig(Config):
     """
 
     TESTING = True
+    RATELIMIT_ENABLED = False
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "TEST_DATABASE_URL", "sqlite:///:memory:"
     )

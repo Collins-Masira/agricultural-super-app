@@ -6,6 +6,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from app.auth.decorators import get_current_user, jwt_required
 from app.errors import ValidationAPIError
+from app.extensions import limiter
 from app.schemas import (
     ai_conversation_detail_schema,
     ai_conversation_schema,
@@ -24,6 +25,7 @@ MAX_MESSAGES = 20
 
 @ai_bp.post("/assistant")
 @jwt_required
+@limiter.limit("20 per minute")
 def ask_assistant():
     """
     Auth required -- this proxies an AI provider (local or hosted; see

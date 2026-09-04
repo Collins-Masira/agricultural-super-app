@@ -1,6 +1,6 @@
 # tests/unit/test_auth_service.py
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -277,7 +277,7 @@ class TestResetPassword:
             PasswordResetToken(
                 user_id=user.id,
                 token_hash=auth_service._hash_token(raw_token),
-                expires_at=datetime.utcnow() + timedelta(hours=1),
+                expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1),
             )
         )
         db.session.commit()
@@ -299,7 +299,7 @@ class TestResetPassword:
             PasswordResetToken(
                 user_id=user.id,
                 token_hash=auth_service._hash_token(raw_token),
-                expires_at=datetime.utcnow() - timedelta(seconds=1),
+                expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1),
             )
         )
         db.session.commit()
@@ -314,7 +314,7 @@ class TestResetPassword:
             PasswordResetToken(
                 user_id=user.id,
                 token_hash=auth_service._hash_token(raw_token),
-                expires_at=datetime.utcnow() + timedelta(hours=1),
+                expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1),
             )
         )
         db.session.commit()

@@ -324,7 +324,7 @@ class TestResetPassword:
         assert response.status_code == 422
 
     def test_expired_token_returns_422(self, client, amina):
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         from app.extensions import db
         from app.models import PasswordResetToken
@@ -336,7 +336,7 @@ class TestResetPassword:
             .filter_by(token_hash=auth_service._hash_token(raw_token))
             .first()
         )
-        record.expires_at = datetime.utcnow() - timedelta(seconds=1)
+        record.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
         db.session.commit()
 
         response = client.post(

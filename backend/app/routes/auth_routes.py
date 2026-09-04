@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from app.auth.decorators import get_current_user, jwt_required
 from app.auth.jwt import encode_token
 from app.errors import ValidationAPIError
+from app.extensions import limiter
 from app.schemas import user_schema
 from app.services import auth_service
 from app.validators import password_requirement_failures
@@ -13,6 +14,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 @auth_bp.post("/register")
+@limiter.limit("10 per hour")
 def register():
     """
     Register a new user account.
@@ -67,6 +69,7 @@ def register():
 
 
 @auth_bp.post("/login")
+@limiter.limit("20 per minute")
 def login():
     """
     Log in with a username or email, plus password.
@@ -139,6 +142,7 @@ def me():
 
 
 @auth_bp.post("/forgot-password")
+@limiter.limit("5 per hour")
 def forgot_password():
     """
     Request a password reset email.
@@ -182,6 +186,7 @@ def forgot_password():
 
 
 @auth_bp.post("/reset-password")
+@limiter.limit("10 per hour")
 def reset_password():
     """
     Reset a password using a mailed reset token.
