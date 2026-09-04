@@ -1,10 +1,10 @@
 # app/services/email_service.py
 
 """
-Real SMTP email delivery via Flask-Mail. Currently only wired up for
-password-reset emails (see auth_service.request_password_reset), but
+Real SMTP email delivery via Flask-Mail. Wired up for password-reset
+emails and admin new-signup notifications (see auth_service), but
 send_email() itself is generic -- any future transactional email
-(welcome, notifications, ...) reuses this rather than a new integration.
+reuses this rather than a new integration.
 
 Two distinct failure modes, deliberately not collapsed into one:
   - EmailNotConfiguredError: MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD
@@ -118,6 +118,69 @@ def password_reset_email(username, reset_url, expires_in_minutes):
                   If you didn't request this, you can safely ignore this email -- your password will
                   not be changed.
                 </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+    return html_body, text_body
+
+
+def new_signup_email(username, email, role, manage_url):
+    """Returns (html_body, text_body) notifying an admin of a new signup."""
+    text_body = (
+        f"A new user just registered on {APP_NAME}.\n\n"
+        f"Username: {username}\n"
+        f"Email: {email}\n"
+        f"Role: {role}\n\n"
+        f"Manage this user (e.g. promote to admin) here:\n{manage_url}\n\n"
+        f"-- The {APP_NAME} Team"
+    )
+
+    html_body = f"""\
+<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background-color:#f7f5f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f5f0;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="padding:32px 32px 0;">
+                <p style="margin:0 0 24px;font-size:20px;font-weight:700;color:#1c1a17;">
+                  Agri<span style="color:#2f6b3a;">Connect</span>
+                </p>
+                <h1 style="margin:0 0 16px;font-size:20px;color:#1c1a17;">New user signed up</h1>
+                <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6b655c;">
+                  A new user just registered on {APP_NAME}:
+                </p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td style="padding:4px 0;font-size:14px;color:#6b655c;width:90px;">Username</td>
+                    <td style="padding:4px 0;font-size:14px;color:#1c1a17;font-weight:600;">{username}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;font-size:14px;color:#6b655c;">Email</td>
+                    <td style="padding:4px 0;font-size:14px;color:#1c1a17;font-weight:600;">{email}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;font-size:14px;color:#6b655c;">Role</td>
+                    <td style="padding:4px 0;font-size:14px;color:#1c1a17;font-weight:600;">{role}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:0 32px 24px;">
+                <a href="{manage_url}"
+                   style="display:inline-block;padding:12px 32px;background-color:#2f6b3a;color:#ffffff;
+                          text-decoration:none;border-radius:8px;font-size:15px;font-weight:600;">
+                  Manage this user
+                </a>
               </td>
             </tr>
           </table>

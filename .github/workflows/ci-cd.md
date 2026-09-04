@@ -4,39 +4,55 @@ This document describes the continuous integration setup for the **Agricultural 
 
 ## Current State
 
-- A **repository-level foundation workflow** exists: [`repository-ci.yml`](repository-ci.yml).
-- It runs on pushes to `develop` and on all pull requests.
-- It currently performs **safe, stack-independent checks**:
-  1. Verifies the Day 1 documentation structure is present.
-  2. Validates `docs/schema.dbml` contains all 13 MVP tables.
-  3. Scans tracked files for obvious secret patterns.
-  4. Confirms `frontend/` and `backend/` exist in the same repository.
-- No secrets, credentials, or environment variables are used.
+Three workflows run in this repository:
 
-## Application-Specific CI (future)
+- [`repository-ci.yml`](repository-ci.yml) — repository-level foundation checks (documentation
+  structure, `docs/schema.dbml` table coverage, a secret-pattern scan, and that `frontend/` and
+  `backend/` both exist). Runs on pushes to `develop` and on all pull requests.
+- [`backend-ci.yml`](backend-ci.yml) — installs backend dependencies
+  (`pip install -r requirements-dev.txt`), applies Alembic migrations to a clean PostgreSQL
+  service container (`flask db upgrade`), verifies the models match the migration history
+  (`flask db check`), runs the pytest suite (`pytest`), and verifies the app boots with Flasgger
+  enabled and serves `/apidocs/` and `/apispec.json`. Runs on pushes to `main`/`develop` and on
+  pull requests, only when `backend/` changes.
+- [`frontend-ci.yml`](frontend-ci.yml) — installs frontend dependencies (`npm ci`), runs the
+  Vitest suite (`npm test`), and builds for production (`npm run build`). Runs on pushes to
+  `main`/`develop` and on pull requests, only when `frontend/` changes.
 
-The frontend/backend technology stack has **not been selected yet** (frontend/ and backend/ contain no application code). Application-specific CI cannot be written against commands that do not exist — that would create workflows guaranteed to fail.
+None of the three use `continue-on-error`; any failing step fails the workflow. No real secrets
+are used — `backend-ci.yml` sets CI-only placeholder values for `SECRET_KEY`, `JWT_SECRET_KEY`,
+and the PostgreSQL service credentials, none of which are valid outside the ephemeral CI runner.
 
-When the stack is scaffolded (next milestone), add workflows in this directory:
+## Continuous Deployment
 
-| File | Purpose |
-| --- | --- |
-| `frontend-ci.yml` | Install frontend dependencies, lint/type-check, test, build |
-| `backend-ci.yml` | Install backend dependencies, lint/type-check, test, build |
+No deployment platform is currently configured anywhere in this repository (no `Dockerfile`,
+`Procfile`, `render.yaml`, `fly.toml`, or similar was found). Deployment is intentionally **not**
+implemented — see the root `README.md` for what a future `deploy.yml` (triggered on `main` after
+`backend-ci`/`frontend-ci` succeed) would still need: a chosen hosting platform for the Flask API
+and the built frontend, that platform's deploy credentials stored as GitHub Actions secrets, and
+a real `DATABASE_URL`/`SECRET_KEY`/`JWT_SECRET_KEY`/AI provider key set for that environment.
 
-Both should run on pull requests and pushes to `develop`, use pinned dependency versions, and fail on any error.
+## Branch Protection (configure in GitHub, not in this repository)
+
+GitHub branch protection rules live in repository settings, not in workflow files, and were not
+changed by this repository's automation. For `main` (and `develop`, if desired), enable:
+
+- Require a pull request before merging (no direct pushes).
+- Require status checks to pass before merging, selecting the `Repository Foundation CI`,
+  `Backend CI / Test, migrations, and API docs`, and `Frontend CI / Test and build` checks.
+- Require branches to be up to date before merging.
 
 ## Workflow Requirements
 
 - Runs on `main`/`develop` and all pull requests.
-- Uses pinned dependency versions for reproducible installs (e.g. lockfiles).
-- Fails on lint, formatting, type, test, or build errors.
-- Secrets passed only via GitHub Secrets — never inline.
+- Uses pinned dependency versions for reproducible installs (lockfiles: `requirements.txt` /
+  `requirements-dev.txt`, `package-lock.json`).
+- Fails on test, migration-integrity, or build errors.
+- Secrets passed only via GitHub Secrets — never inline. CI itself needs none, since it only ever
+  talks to the ephemeral PostgreSQL service container it starts.
 
 ## Later Additions
 
 | Stage | Addition |
 | --- | --- |
-| App scaffolding | `frontend-ci.yml` / `backend-ci.yml` |
-| Auth & posts | Unit/integration tests in the app workflows |
-| Production | Deployment pipeline, dependency security scanning |
+| Production | Deployment pipeline once a hosting platform is chosen, dependency security scanning |

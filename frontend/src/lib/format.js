@@ -39,10 +39,74 @@ export function formatRelativeTime(value) {
   return formatDate(value)
 }
 
+/** Posts still need a `title` at the API layer (required, non-null column),
+ * but the composer UI is caption-only now -- this derives a short title
+ * from the caption so the requirement never surfaces to the user. */
+export function deriveTitle(content) {
+  const trimmed = content.trim()
+  if (trimmed.length <= 60) return trimmed || 'Untitled post'
+  return `${trimmed.slice(0, 57).trimEnd()}...`
+}
+
+const HASHTAG_PATTERN = /#[a-zA-Z][\w]*/g
+
+/** Splits caption text into plain/hashtag segments for inline rendering,
+ * e.g. in the Reels feed. Hashtags are a plain-text convention (no
+ * dedicated backend field) parsed straight out of the caption. */
+export function splitHashtags(content) {
+  const segments = []
+  let lastIndex = 0
+  for (const match of content.matchAll(HASHTAG_PATTERN)) {
+    if (match.index > lastIndex) {
+      segments.push({ text: content.slice(lastIndex, match.index), isHashtag: false })
+    }
+    segments.push({ text: match[0], isHashtag: true })
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < content.length) {
+    segments.push({ text: content.slice(lastIndex), isHashtag: false })
+  }
+  return segments
+}
+
 export function initials(firstName, lastName, username) {
   const a = firstName?.trim().charAt(0)
   const b = lastName?.trim().charAt(0)
   if (a && b) return `${a}${b}`.toUpperCase()
   if (a) return a.toUpperCase()
   return username?.slice(0, 2).toUpperCase() ?? '?'
+}
+
+/** Compact counts for stats/metadata, e.g. 12400 -> "12.4K", 2_000_000 -> "2M". */
+export function formatCount(value) {
+  const n = Number(value) || 0
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${trimZero(n / 1000)}K`
+  return `${trimZero(n / 1_000_000)}M`
+}
+
+function trimZero(n) {
+  return n.toFixed(1).replace(/\.0$/, '')
+}
+
+/**
+ * Groups a list of items into "Today" / "Yesterday" / "Earlier" buckets by a
+ * date field, preserving each bucket's incoming order. Comparisons use local
+ * calendar days (not a rolling 24h window), matching how activity feeds like
+ * Instagram's group notifications.
+ */
+export function groupByDay(items, dateKey) {
+  const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const today = startOfDay(new Date())
+  const yesterday = today - 24 * 60 * 60 * 1000
+
+  const buckets = { Today: [], Yesterday: [], Earlier: [] }
+  for (const item of items) {
+    const day = startOfDay(asUtcDate(item[dateKey]))
+    if (day === today) buckets.Today.push(item)
+    else if (day === yesterday) buckets.Yesterday.push(item)
+    else buckets.Earlier.push(item)
+  }
+
+  return Object.entries(buckets).filter(([, list]) => list.length > 0)
 }

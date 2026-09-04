@@ -20,6 +20,7 @@ class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
     post_id = fields.Integer(dump_only=True)
+    parent_comment_id = fields.Integer(dump_only=True, allow_none=True)
 
     content = fields.String(
         required=True,

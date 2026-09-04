@@ -179,6 +179,25 @@ Table password_reset_tokens {
   Note: 'Stores only the SHA-256 hash of the raw reset token. The raw token is never recoverable from the database. Tokens are single-use (checked via used_at) and time-limited (checked via expires_at).'
 }
 
+// AI Farming Assistant conversations. Deliberately separate from
+// conversations/messages above (human-to-human messaging) -- an AI
+// turn has no sender_id/is_read/participants, just a role.
+Table ai_conversations {
+  id integer [pk, increment]
+  user_id integer [not null]
+  title varchar(255) [null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table ai_messages {
+  id integer [pk, increment]
+  conversation_id integer [not null]
+  role varchar(20) [not null]  // 'user' | 'assistant' | 'system'
+  content text [not null]
+  created_at timestamp [default: `now()`]
+}
+
 // ============================================================
 // Relationships
 // ============================================================
@@ -217,3 +236,5 @@ Ref: messages.conversation_id > conversations.id [delete: cascade]
 Ref: messages.sender_id > users.id [delete: cascade]
 
 Ref: password_reset_tokens.user_id > users.id [delete: cascade]
+Ref: ai_conversations.user_id > users.id [delete: cascade]
+Ref: ai_messages.conversation_id > ai_conversations.id [delete: cascade]

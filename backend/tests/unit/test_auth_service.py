@@ -51,6 +51,75 @@ class TestRegisterUser:
         with pytest.raises(ConflictError):
             auth_service.register_user(_register_data(username="different", email="shared@example.com"))
 
+    def test_notifies_no_one_when_admin_notification_emails_unset(self):
+        # TestingConfig leaves ADMIN_NOTIFICATION_EMAILS at its default
+        # (empty) -- registration must still succeed and send nothing.
+        from app.extensions import mail
+
+        with mail.record_messages() as outbox:
+            auth_service.register_user(_register_data())
+
+        assert len(outbox) == 0
+
+    def test_emails_every_configured_admin_on_signup(self, app, monkeypatch):
+        from app.extensions import mail
+
+        monkeypatch.setitem(
+            app.config, "ADMIN_NOTIFICATION_EMAILS", ["admin1@example.com", "admin2@example.com"]
+        )
+
+        with mail.record_messages() as outbox:
+            auth_service.register_user(_register_data(username="amina", email="amina@example.com"))
+
+        assert len(outbox) == 2
+        recipients = {message.recipients[0] for message in outbox}
+        assert recipients == {"admin1@example.com", "admin2@example.com"}
+        assert "amina" in outbox[0].body
+        assert "amina@example.com" in outbox[0].body
+
+    def test_does_not_raise_when_email_is_not_configured(self, app, monkeypatch):
+        monkeypatch.setitem(app.config, "ADMIN_NOTIFICATION_EMAILS", ["admin@example.com"])
+        monkeypatch.setitem(app.config, "MAIL_SERVER", None)
+        monkeypatch.setitem(app.config, "MAIL_USERNAME", None)
+        monkeypatch.setitem(app.config, "MAIL_PASSWORD", None)
+
+        # Registration itself must still succeed -- a notification gap
+        # is never allowed to block or fail the actual signup.
+        user = auth_service.register_user(_register_data())
+        assert user.id is not None
+
+    def test_does_not_raise_when_smtp_send_fails(self, app, monkeypatch):
+        from app.services import email_service
+
+        monkeypatch.setitem(app.config, "ADMIN_NOTIFICATION_EMAILS", ["admin@example.com"])
+
+        def _boom(**kwargs):
+            raise email_service.EmailDeliveryError("SMTP server unexpectedly closed the connection")
+
+        monkeypatch.setattr(email_service, "send_email", _boom)
+
+        user = auth_service.register_user(_register_data())
+        assert user.id is not None
+
+    def test_one_failing_admin_does_not_block_the_next(self, app, monkeypatch):
+        from app.services import email_service
+
+        monkeypatch.setitem(
+            app.config, "ADMIN_NOTIFICATION_EMAILS", ["bad@example.com", "good@example.com"]
+        )
+
+        sent_to = []
+
+        def _send(to, **kwargs):
+            sent_to.append(to)
+            if to == "bad@example.com":
+                raise email_service.EmailDeliveryError("rejected")
+
+        monkeypatch.setattr(email_service, "send_email", _send)
+
+        auth_service.register_user(_register_data())
+        assert sent_to == ["bad@example.com", "good@example.com"]
+
 
 class TestAuthenticateUser:
     def test_valid_username_and_password_succeeds(self, create_user):

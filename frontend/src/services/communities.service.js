@@ -34,6 +34,15 @@ export const communitiesService = {
     return normalizeCommunity(community)
   },
 
+  async updateCommunitySettings(id, settings) {
+    const community = await httpClient.put(`/communities/${id}`, {
+      posting_permission: settings.postingPermission,
+      messaging_permission: settings.messagingPermission,
+      comments_enabled: settings.commentsEnabled,
+    })
+    return normalizeCommunity(community)
+  },
+
   async joinCommunity(id) {
     if (env.useMocks) {
       const { mockCommunities } = await import('./mocks/mockApi')
@@ -50,9 +59,14 @@ export const communitiesService = {
     return httpClient.delete(`/communities/${id}/members`)
   },
 
-  // Backend allows the community's creator OR an admin to delete it (see
-  // community_service._assert_creator) -- moderation reuses this same
-  // endpoint, there's no separate admin-only one.
+  async setMemberRole(communityId, userId, role) {
+    return httpClient.patch(`/communities/${communityId}/members/${userId}`, { role })
+  },
+
+  async removeMember(communityId, userId) {
+    return httpClient.delete(`/communities/${communityId}/members/${userId}`)
+  },
+
   async deleteCommunity(id) {
     if (env.useMocks) return
     return httpClient.delete(`/communities/${id}`)

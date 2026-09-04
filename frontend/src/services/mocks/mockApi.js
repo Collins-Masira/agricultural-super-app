@@ -204,8 +204,8 @@ export const mockExperts = {
   },
 
   async getExpert(userId) {
-    const user = users.find((u) => u.id === userId && u.role === 'expert')
-    if (!user) fail('Expert not found.', 404)
+    const user = users.find((u) => u.id === userId)
+    if (!user) fail('User not found.', 404)
     return delay(toProfile(user))
   },
 
@@ -250,6 +250,25 @@ export const mockExperts = {
       followingCount: followingIds.length,
       followersCount: follows.filter((f) => f.followingId === userId).length,
       followingIds,
+    })
+  },
+}
+
+export const mockUsers = {
+  async searchUsers(query, page = 1, pageSize = 20) {
+    const term = query.trim().toLowerCase()
+    const matches = users
+      .filter((u) => {
+        const haystack = `${u.username} ${u.profile.firstName ?? ''} ${u.profile.lastName ?? ''}`.toLowerCase()
+        return haystack.includes(term)
+      })
+      .map(toProfile)
+    const start = (page - 1) * pageSize
+    return delay({
+      items: matches.slice(start, start + pageSize),
+      page,
+      pageSize,
+      total: matches.length,
     })
   },
 }

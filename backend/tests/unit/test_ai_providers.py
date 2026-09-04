@@ -38,6 +38,28 @@ class _FakeResponse:
         return False
 
 
+class _FakeStreamResponse:
+    """
+    Stand-in for the line-iterable response object urllib.request.urlopen()
+    returns for a streaming request -- both providers' stream_complete()
+    iterate the response object directly (`for raw_line in response`)
+    rather than calling .read(), so this yields pre-encoded lines instead
+    of holding one big body.
+    """
+
+    def __init__(self, lines):
+        self._lines = [line.encode("utf-8") if isinstance(line, str) else line for line in lines]
+
+    def __iter__(self):
+        return iter(self._lines)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
 class TestGetProvider:
     def test_defaults_to_ollama(self):
         provider = get_provider({})
@@ -131,6 +153,72 @@ class TestOllamaProvider:
         provider = OllamaProvider(base_url=None, model="llama3.2:1b")
         assert provider.base_url == "http://localhost:11434"
 
+    def test_request_body_sets_keep_alive_and_output_cap(self):
+        provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2:1b")
+        body = json.loads(provider._request_body([{"role": "user", "content": "hi"}], "sys", stream=False))
+        assert body["keep_alive"] == OllamaProvider.KEEP_ALIVE
+        assert body["options"]["num_predict"] == OllamaProvider.MAX_OUTPUT_TOKENS
+
+
+class TestOllamaProviderStreaming:
+    def test_stream_complete_yields_chunks_in_order(self, monkeypatch):
+        lines = [
+            json.dumps({"message": {"content": "Water "}, "done": False}),
+            json.dumps({"message": {"content": "deeply."}, "done": False}),
+            json.dumps({"message": {"content": ""}, "done": True}),
+        ]
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2:1b")
+
+        chunks = list(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+        assert chunks == ["Water ", "deeply."]
+
+    def test_stream_complete_skips_blank_and_malformed_lines(self, monkeypatch):
+        lines = ["", "not json", json.dumps({"message": {"content": "ok"}, "done": True})]
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2:1b")
+
+        chunks = list(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+        assert chunks == ["ok"]
+
+    def test_stream_complete_unreachable_raises_before_any_chunk(self, monkeypatch):
+        def raise_unreachable(*a, **k):
+            raise urllib.error.URLError("Connection refused")
+
+        monkeypatch.setattr(ai_providers.urllib.request, "urlopen", raise_unreachable)
+        provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2:1b")
+
+        with pytest.raises(AIProviderError) as exc:
+            next(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+        assert "not reachable" in exc.value.public_message.lower()
+
+    def test_stream_complete_no_content_raises_ai_provider_error(self, monkeypatch):
+        lines = [json.dumps({"message": {"content": ""}, "done": True})]
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2:1b")
+
+        with pytest.raises(AIProviderError):
+            list(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+
+    def test_stream_complete_missing_model_raises_actionable_error(self, monkeypatch):
+        def raise_404(*a, **k):
+            raise urllib.error.HTTPError(
+                "url", 404, "Not Found", hdrs=None, fp=io.BytesIO(b'{"error":"model \'x\' not found"}')
+            )
+
+        monkeypatch.setattr(ai_providers.urllib.request, "urlopen", raise_404)
+        provider = OllamaProvider(base_url="http://localhost:11434", model="does-not-exist")
+
+        with pytest.raises(AIProviderError) as exc:
+            next(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+        assert "does-not-exist" in exc.value.public_message
+
 
 class TestAnthropicProvider:
     def test_missing_api_key_raises_before_any_network_call(self, monkeypatch):
@@ -165,3 +253,78 @@ class TestAnthropicProvider:
             provider.complete([{"role": "user", "content": "hi"}], "sys")
         # Never leak the raw upstream error body to the public message.
         assert "internal details" not in exc.value.public_message
+
+
+class TestAnthropicProviderStreaming:
+    def _sse_lines(self, *events):
+        """Builds raw SSE lines the way the real Anthropic API frames them."""
+        lines = []
+        for event_type, data in events:
+            lines.append(f"event: {event_type}")
+            lines.append(f"data: {json.dumps(data)}")
+            lines.append("")
+        return lines
+
+    def test_missing_api_key_raises_before_any_network_call(self, monkeypatch):
+        def fail_if_called(*a, **k):
+            raise AssertionError("urlopen should not be called without an API key")
+
+        monkeypatch.setattr(ai_providers.urllib.request, "urlopen", fail_if_called)
+        provider = AnthropicProvider(api_key=None, model="claude-sonnet-5")
+
+        with pytest.raises(AIProviderError) as exc:
+            next(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+        assert "ANTHROPIC_API_KEY" in exc.value.public_message
+
+    def test_stream_complete_yields_text_deltas_in_order(self, monkeypatch):
+        lines = self._sse_lines(
+            ("message_start", {"type": "message_start"}),
+            ("content_block_delta", {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "Plant "}}),
+            ("content_block_delta", {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "in rows."}}),
+            ("message_stop", {"type": "message_stop"}),
+        )
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5")
+
+        chunks = list(provider.stream_complete([{"role": "user", "content": "Maize spacing?"}], "sys"))
+        assert chunks == ["Plant ", "in rows."]
+
+    def test_stream_complete_error_event_raises_ai_provider_error(self, monkeypatch):
+        lines = self._sse_lines(
+            ("content_block_delta", {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "Pla"}}),
+            ("error", {"type": "error", "error": {"message": "overloaded_error: try again"}}),
+        )
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5")
+
+        chunks = []
+        with pytest.raises(AIProviderError) as exc:
+            for chunk in provider.stream_complete([{"role": "user", "content": "hi"}], "sys"):
+                chunks.append(chunk)
+        assert chunks == ["Pla"]
+        # The raw upstream error detail must never leak into the public message.
+        assert "overloaded_error" not in exc.value.public_message
+
+    def test_stream_complete_no_content_raises_ai_provider_error(self, monkeypatch):
+        lines = self._sse_lines(("message_stop", {"type": "message_stop"}))
+        monkeypatch.setattr(
+            ai_providers.urllib.request, "urlopen", lambda *a, **k: _FakeStreamResponse(lines)
+        )
+        provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5")
+
+        with pytest.raises(AIProviderError):
+            list(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))
+
+    def test_stream_complete_unreachable_raises(self, monkeypatch):
+        def raise_unreachable(*a, **k):
+            raise urllib.error.URLError("Connection refused")
+
+        monkeypatch.setattr(ai_providers.urllib.request, "urlopen", raise_unreachable)
+        provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5")
+
+        with pytest.raises(AIProviderError):
+            next(provider.stream_complete([{"role": "user", "content": "hi"}], "sys"))

@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/ui'
 import { useAuth } from '@/features/auth/AuthContext'
 import {
+  BellIcon,
   CommunityIcon,
   HomeIcon,
   LogOutIcon,
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: <SparkleIcon width={18} height={18} />, end: true },
   { to: '/admin/users', label: 'Users', icon: <UsersIcon width={18} height={18} /> },
   { to: '/admin/posts', label: 'Content moderation', icon: <MessageIcon width={18} height={18} /> },
+  { to: '/admin/reports', label: 'Reports', icon: <BellIcon width={18} height={18} /> },
   { to: '/admin/communities', label: 'Communities', icon: <CommunityIcon width={18} height={18} /> },
 ]
 

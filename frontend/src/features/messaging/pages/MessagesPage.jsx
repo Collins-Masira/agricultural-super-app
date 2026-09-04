@@ -65,7 +65,7 @@ export function MessagesPage() {
                   className="asa-conversation-item"
                   onClick={() => navigate(`/messages/${conversation.id}`)}
                 >
-                  <Avatar imageUrl={partner?.profile.profileImageUrl} name={name} username={partner?.user.username} size="md" />
+                  <Avatar imageUrl={partner?.profile.profileImageUrl} name={name} username={partner?.user.username} size="lg" />
                   <div className="asa-conversation-item__body">
                     <div className="asa-conversation-item__top">
                       <span className={`asa-conversation-item__name ${unread > 0 ? 'asa-conversation-item__name--unread' : ''}`}>

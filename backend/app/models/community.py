@@ -1,7 +1,7 @@
-# app/models/community.py
-
 from datetime import datetime
 from app.extensions import db
+
+COMMUNITY_PERMISSION_LEVELS = ("everyone", "experts_only", "admins_only")
 
 
 class Community(db.Model):
@@ -30,6 +30,27 @@ class Community(db.Model):
         db.Integer,
         db.ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False
+    )
+
+    posting_permission = db.Column(
+        db.String(20),
+        nullable=False,
+        default="everyone",
+        server_default="everyone"
+    )
+
+    messaging_permission = db.Column(
+        db.String(20),
+        nullable=False,
+        default="everyone",
+        server_default="everyone"
+    )
+
+    comments_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+        server_default="1"
     )
 
     created_at = db.Column(
@@ -66,4 +87,21 @@ class Community(db.Model):
         "Conversation",
         foreign_keys="Conversation.community_id",
         back_populates="community"
+    )
+
+    posts = db.relationship(
+        "Post",
+        back_populates="community",
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            f"posting_permission IN {COMMUNITY_PERMISSION_LEVELS}",
+            name="ck_communities_posting_permission"
+        ),
+        db.CheckConstraint(
+            f"messaging_permission IN {COMMUNITY_PERMISSION_LEVELS}",
+            name="ck_communities_messaging_permission"
+        ),
     )

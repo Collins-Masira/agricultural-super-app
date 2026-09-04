@@ -1,30 +1,30 @@
 import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Avatar, Card, EmptyState, ErrorState, LoadingState } from '@/components/ui'
-import { VerifiedBadge } from '@/components/ui'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Avatar, Card, EmptyState, ErrorState, LoadingState, PostContent, ReactionPicker, RepostButton, SaveButton, ShareButton, VerifiedBadge } from '@/components/ui'
+import { RepeatIcon } from '@/components/icons'
 import { formatRelativeTime } from '@/lib/format'
-import { addComment, fetchPost, toggleLike } from '@/store/slices/postsSlice'
+import { fetchPost, removeReaction, setReaction, toggleRepost, toggleSave } from '@/store/slices/postsSlice'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { LikeButton } from '../components/LikeButton'
 import { CommentSection } from '../components/CommentSection'
+import { PostMenu } from '../components/PostMenu'
+import { PostMedia } from '../components/PostMedia'
 import '../components/posts.css'
 
 export function PostDetailPage() {
   const { postId } = useParams()
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
   const post = useAppSelector((state) => state.posts.current)
   const status = useAppSelector((state) => state.posts.currentStatus)
   const error = useAppSelector((state) => state.posts.currentError)
-  const likeLoading = useAppSelector((state) => state.posts.likeLoadingPostId === post?.id)
+  const reactionLoading = useAppSelector((state) => state.posts.reactionLoadingPostId === post?.id)
+  const saveLoading = useAppSelector((state) => state.posts.saveLoadingPostId === post?.id)
+  const repostLoading = useAppSelector((state) => state.posts.repostLoadingPostId === post?.id)
 
   useEffect(() => {
     if (postId) dispatch(fetchPost(Number(postId)))
   }, [dispatch, postId])
-
-  function handleToggleLike() {
-    if (post && !likeLoading) dispatch(toggleLike(post.id))
-  }
 
   if (status === 'loading') return <LoadingState label="Loading post…" />
   if (status === 'error') return <ErrorState message={error ?? undefined} onRetry={() => postId && dispatch(fetchPost(Number(postId)))} />
@@ -34,6 +34,7 @@ export function PostDetailPage() {
     post.author.profile.firstName && post.author.profile.lastName
       ? `${post.author.profile.firstName} ${post.author.profile.lastName}`
       : post.author.user.username
+  const displayedPost = post.originalPost ?? post
 
   return (
     <article>
@@ -52,32 +53,61 @@ export function PostDetailPage() {
               </Link>
               <VerifiedBadge profile={post.author.profile} />
             </div>
-            <span className="asa-post-card__time">{formatRelativeTime(post.createdAt)}</span>
+            <span className="asa-post-card__time">
+              {post.author.profile.location ? `${post.author.profile.location} · ` : ''}
+              {formatRelativeTime(post.createdAt)}
+            </span>
+          </div>
+          <div className="asa-post-card__menu">
+            <PostMenu post={post} onDeleted={() => navigate('/')} />
           </div>
         </header>
 
-        <h1 className="asa-post-detail__title">{post.title}</h1>
-        <p className="asa-post-detail__content">{post.content}</p>
-
-        {post.images.length > 0 && (
-          <div className="asa-post-detail__images">
-            {post.images.map((image) => (
-              <img key={image.id} src={image.imageUrl} alt="" />
-            ))}
-          </div>
+        {post.originalPost && (
+          <p className="asa-post-card__repost-note">
+            <RepeatIcon width={14} height={14} /> Reposted from{' '}
+            {post.originalPost.author.profile.firstName || post.originalPost.author.user.username}
+          </p>
         )}
 
+        {displayedPost.isAnnouncement && (
+          <span className="asa-post-card__announcement">📢 Community Announcement</span>
+        )}
+
+        <h1 className="asa-post-detail__title">{displayedPost.title}</h1>
+        <PostContent content={displayedPost.content} className="asa-post-detail__content" />
+        <PostMedia
+          images={displayedPost.images}
+          videoUrl={displayedPost.videoUrl}
+          onDoubleTap={() => {
+            if (!post.myReaction) dispatch(setReaction({ postId: post.id, reactionType: 'love' }))
+          }}
+        />
+
         <footer className="asa-post-card__footer">
-          <LikeButton
-            liked={post.likedByMe}
-            count={post.likeCount}
-            onToggle={handleToggleLike}
-            loading={likeLoading}
+          <ReactionPicker
+            reactionCounts={post.reactionCounts}
+            myReaction={post.myReaction}
+            loading={reactionLoading}
+            onReact={(reactionType) => dispatch(setReaction({ postId: post.id, reactionType }))}
+            onRemove={() => dispatch(removeReaction(post.id))}
           />
+          <RepostButton
+            reposted={post.repostedByMe}
+            count={post.repostCount}
+            loading={repostLoading}
+            onToggle={() => dispatch(toggleRepost(post.id))}
+          />
+          <ShareButton postId={post.id} />
+          <SaveButton saved={post.savedByMe} loading={saveLoading} onToggle={() => dispatch(toggleSave(post.id))} />
         </footer>
+
+        {post.likeCount > 0 && <p className="asa-post-card__likes">{post.likeCount} likes</p>}
       </Card>
 
-      <CommentSection post={post} onCommentAdded={(comment) => dispatch(addComment({ postId: post.id, content: comment }))} />
+      <div id="comments">
+        <CommentSection post={post} />
+      </div>
     </article>
   )
 }

@@ -1,0 +1,202 @@
+.asa-reels-page {
+  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height));
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  border-radius: var(--radius-lg);
+  background-color: #000;
+}
+
+@media (min-width: 40rem) {
+  .asa-reels-page {
+    height: calc(100dvh - var(--header-height) - var(--space-7) * 2);
+  }
+}
+
+.asa-reels-page__state {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-surface);
+}
+
+.asa-reels-page__state .asa-state__title {
+  color: var(--color-surface);
+}
+
+.asa-reels-page__state .asa-state__description {
+  color: rgb(255 255 255 / 0.7);
+}
+
+.asa-reel-card {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  background-color: #111;
+}
+
+.asa-reel-card__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #000;
+  cursor: pointer;
+}
+
+.asa-reel-card__heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  filter: drop-shadow(0 2px 10px rgb(0 0 0 / 0.4));
+  pointer-events: none;
+  animation: asa-heart-pop 0.7s ease-out;
+}
+
+.asa-reel-card__play-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgb(255 255 255 / 0.85);
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 0.5));
+  pointer-events: none;
+}
+
+.asa-reel-card__mute {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background-color: rgb(0 0 0 / 0.4);
+  color: #fff;
+  cursor: pointer;
+}
+
+.asa-reel-card__menu {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 2;
+}
+
+.asa-reel-card__menu .asa-dropdown__menu {
+  right: auto;
+  left: 0;
+}
+
+.asa-reel-card__overlay {
+  position: absolute;
+  left: 0;
+  right: 4.5rem;
+  bottom: 0;
+  z-index: 2;
+  padding: var(--space-4);
+  padding-top: var(--space-7);
+  background: linear-gradient(to top, rgb(0 0 0 / 0.65), transparent);
+  color: #fff;
+  pointer-events: none;
+}
+
+.asa-reel-card__overlay > * {
+  pointer-events: auto;
+}
+
+.asa-reel-card__creator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.asa-reel-card__name {
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.asa-reel-card__creator .asa-btn {
+  margin-left: var(--space-1);
+}
+
+.asa-reel-card__caption {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.asa-reel-card__hashtag {
+  font-weight: var(--font-weight-semibold);
+}
+
+.asa-reel-card__views {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: rgb(255 255 255 / 0.85);
+}
+
+.asa-reel-card__actions {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-4);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.asa-reel-card__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.asa-reel-card__action .asa-reaction-picker,
+.asa-reel-card__action.asa-post__action {
+  color: #fff;
+}
+
+.asa-reel-card__actions .asa-reaction-picker__chevron,
+.asa-reel-card__actions .asa-post__action {
+  color: #fff;
+}
+
+.asa-reel-card__actions .asa-reaction-picker__trigger--active {
+  color: var(--color-danger);
+}
+
+.asa-reel-card__actions .asa-post__action--active {
+  color: var(--color-primary-soft);
+}
+
+.asa-reel-comments .asa-comments {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}

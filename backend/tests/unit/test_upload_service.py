@@ -93,3 +93,83 @@ class TestSaveUploadedImage:
         nested = str(tmp_path / "does" / "not" / "exist" / "yet")
         filename = upload_service.save_uploaded_image(_file_storage(_image_bytes("PNG")), nested)
         assert os.path.exists(os.path.join(nested, filename))
+
+
+def _video_bytes(kind="mp4", padding=200):
+    if kind == "webm":
+        return b"\x1a\x45\xdf\xa3" + b"\x00" * padding
+    return b"\x00\x00\x00\x18ftypmp42" + b"\x00" * padding
+
+
+class TestSaveUploadedVideo:
+    def test_saves_valid_mp4_and_returns_filename(self, tmp_path):
+        filename = upload_service.save_uploaded_video(
+            _file_storage(_video_bytes("mp4"), filename="clip.mp4", content_type="video/mp4"),
+            str(tmp_path),
+        )
+        assert filename.endswith(".mp4")
+        assert os.path.exists(os.path.join(tmp_path, filename))
+
+    def test_saves_valid_webm(self, tmp_path):
+        filename = upload_service.save_uploaded_video(
+            _file_storage(_video_bytes("webm"), filename="clip.webm", content_type="video/webm"),
+            str(tmp_path),
+        )
+        assert filename.endswith(".webm")
+
+    def test_saves_valid_quicktime_as_mov(self, tmp_path):
+        filename = upload_service.save_uploaded_video(
+            _file_storage(_video_bytes("mp4"), filename="clip.mov", content_type="video/quicktime"),
+            str(tmp_path),
+        )
+        assert filename.endswith(".mov")
+
+    def test_generates_random_filename_ignoring_client_supplied_name(self, tmp_path):
+        filename = upload_service.save_uploaded_video(
+            _file_storage(_video_bytes("mp4"), filename="../../etc/passwd.mp4", content_type="video/mp4"),
+            str(tmp_path),
+        )
+        assert ".." not in filename
+        assert "/" not in filename
+
+    def test_rejects_unsupported_content_type(self, tmp_path):
+        with pytest.raises(ValidationAPIError):
+            upload_service.save_uploaded_video(
+                _file_storage(_video_bytes("mp4"), filename="clip.avi", content_type="video/x-msvideo"),
+                str(tmp_path),
+            )
+
+    def test_rejects_disguised_non_video_file(self, tmp_path):
+        fake = b"not actually a video, just text pretending to be one"
+        with pytest.raises(ValidationAPIError):
+            upload_service.save_uploaded_video(
+                _file_storage(fake, filename="fake.mp4", content_type="video/mp4"), str(tmp_path)
+            )
+
+    def test_rejects_empty_file(self, tmp_path):
+        with pytest.raises(ValidationAPIError):
+            upload_service.save_uploaded_video(
+                _file_storage(b"", filename="empty.mp4", content_type="video/mp4"), str(tmp_path)
+            )
+
+    def test_rejects_no_file(self, tmp_path):
+        with pytest.raises(ValidationAPIError):
+            upload_service.save_uploaded_video(None, str(tmp_path))
+
+    def test_rejects_oversized_file(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(upload_service, "MAX_VIDEO_SIZE_BYTES", 100)
+        data = _video_bytes("mp4", padding=200)
+        with pytest.raises(ValidationAPIError):
+            upload_service.save_uploaded_video(
+                _file_storage(data, filename="big.mp4", content_type="video/mp4"), str(tmp_path)
+            )
+
+    def test_two_uploads_never_collide(self, tmp_path):
+        data = _video_bytes("mp4")
+        first = upload_service.save_uploaded_video(
+            _file_storage(data, filename="a.mp4", content_type="video/mp4"), str(tmp_path)
+        )
+        second = upload_service.save_uploaded_video(
+            _file_storage(data, filename="b.mp4", content_type="video/mp4"), str(tmp_path)
+        )
+        assert first != second
