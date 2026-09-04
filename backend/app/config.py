@@ -4,6 +4,22 @@ import os
 import tempfile
 
 
+def _normalize_database_url(url):
+    """
+    Some managed Postgres providers (Render included) still hand out
+    connection strings using the legacy `postgres://` scheme, but
+    SQLAlchemy 2.x's dialect loader only recognizes `postgresql://` and
+    raises NoSuchModuleError on the old one. Rewriting just the scheme
+    here means the exact DATABASE_URL a provider gives us works as-is,
+    with no manual edits needed at deploy time. Anything already using
+    `postgresql://` (or any other scheme, e.g. local sqlite) passes
+    through unchanged.
+    """
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://"):]
+    return url
+
+
 class Config:
     """
     Shared base configuration. Every value is overridable via environment
@@ -15,9 +31,11 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/agri_super_app",
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
+        os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres:postgres@localhost:5432/agri_super_app",
+        )
     )
 
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
