@@ -2,19 +2,33 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, ImageUploader, Toast, useToast } from '@/components/ui'
 import { ClapperIcon, LeafIcon } from '@/components/icons'
+import { errorMessage } from '@/features/auth/AuthContext'
+import { useAppDispatch } from '@/store/hooks'
+import { createStory } from '@/store/slices/storiesSlice'
 import '../stories.css'
 
 export function CreateStoryPage() {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const [imageUrls, setImageUrls] = useState([])
   const [uploading, setUploading] = useState(false)
   const [caption, setCaption] = useState('')
+  const [sharing, setSharing] = useState(false)
   const { message, showToast } = useToast(3200)
 
   const previewUrl = imageUrls[0]
 
-  function handleShare() {
-    showToast("Stories aren't saved yet -- this preview isn't backed by the server.")
+  async function handleShare() {
+    if (!previewUrl) return
+    setSharing(true)
+    try {
+      await dispatch(createStory({ imageUrl: previewUrl, caption: caption.trim() })).unwrap()
+      navigate('/')
+    } catch (error) {
+      showToast(errorMessage(error))
+    } finally {
+      setSharing(false)
+    }
   }
 
   return (
@@ -61,8 +75,8 @@ export function CreateStoryPage() {
         <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleShare} disabled={!previewUrl || uploading}>
-          Share story
+        <Button type="button" onClick={handleShare} disabled={!previewUrl || uploading || sharing}>
+          {sharing ? 'Sharing…' : 'Share story'}
         </Button>
       </div>
 

@@ -96,6 +96,18 @@ export function normalizePost(p) {
   }
 }
 
+export function normalizeStory(s) {
+  return {
+    id: s.id,
+    userId: s.user_id,
+    imageUrl: s.image_url,
+    caption: s.caption ?? null,
+    createdAt: s.created_at,
+    expiresAt: s.expires_at,
+    author: toUserProfile(s.author),
+  }
+}
+
 export function normalizeMembership(m) {
   return {
     id: m.id,

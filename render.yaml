@@ -1,0 +1,186 @@
+# render.yaml
+#
+# Render Blueprint for the Agricultural Super App: a Flask/SQLAlchemy
+# backend (backend/), a React/Vite static frontend (frontend/), a
+# managed Postgres database, and a scheduled cleanup job for expired
+# Stories.
+#
+# Commands below are taken directly from this repo, not guessed:
+#   - Backend prod server: gunicorn (added to backend/requirements.txt),
+#     entry point backend/wsgi.py -> `app` (see that file's own docstring).
+#   - Backend deps: backend/requirements.txt (NOT requirements-dev.txt --
+#     that pulls in pytest/coverage, which have no place in production).
+#   - Backend migrations: `flask db upgrade` (Flask-Migrate/Alembic,
+#     see backend/migrations/). Never db.create_all()/db.drop_all().
+#   - Frontend build: `npm ci && npm run build` (see frontend/package.json),
+#     static output in frontend/dist (Vite's default outDir -- unconfigured
+#     in frontend/vite.config.js).
+#   - Story cleanup: backend/scripts/cleanup_expired_stories.py. This is
+#     HOUSEKEEPING ONLY -- expiration itself is enforced on every read by
+#     app/services/story_service.py (`expires_at > now`), independent of
+#     whether this cron job runs, runs late, or never runs at all.
+#
+# Deploys from `branch: feature/Evans` (the branch this was built on) on
+# every service below, per instructions -- change it, or remove the key
+# to fall back to each service's default branch, whenever that's no
+# longer the branch you want deployed. This file does NOT merge or push
+# anything by itself; connecting it to Render and triggering the first
+# deploy is a separate, deliberate step for you to take.
+#
+# IMPORTANT -- upload storage caveat (see docs/TECHNICAL_DEBT.md-style
+# note): this app currently stores uploaded post/profile/story images on
+# local disk (UPLOAD_FOLDER), served back via GET /api/uploads/<file>.
+# A Render "web" service's local filesystem is EPHEMERAL -- it is wiped
+# on every deploy and on most restarts. Left as-is, every previously
+# uploaded image (not just Stories -- this affects Posts and profile
+# photos too, since they already share the same upload_service.py) would
+# 404 after the next deploy. This predates Stories; Stories does not fix
+# or worsen it, it just inherits it by reusing the existing upload
+# system rather than inventing a second one.
+#
+# The commented-out `disk:` block on agricultural-backend below is the
+# smallest fix that needs no code or architecture change: a Render
+# persistent Disk mounted at the same path as UPLOAD_FOLDER. It is
+# commented out because Render Disks require a paid instance plan (not
+# available on `plan: free`) and pin the service to a single instance
+# (no horizontal scaling) -- a cost/scaling tradeoff only you should
+# decide on, not something to silently opt you into. Uncomment it (and
+# bump `plan:` on that service to a paid tier) before relying on uploads
+# surviving a redeploy in production.
+
+services:
+  - type: web
+    name: agricultural-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    branch: feature/Evans
+    buildCommand: "pip install -r requirements.txt && flask db upgrade"
+    startCommand: "gunicorn wsgi:app --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRES_SECONDS
+        value: "86400"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agricultural-db
+          property: connectionString
+      # Real production origin(s) of the deployed frontend, comma-
+      # separated (e.g. https://agricultural-frontend.onrender.com).
+      # Only known after the frontend's first deploy -- set manually
+      # rather than guessed, and never left open to "*" in production.
+      - key: CORS_ORIGINS
+        sync: false
+      # Same reason as CORS_ORIGINS: the frontend's real URL, used to
+      # build links in outgoing emails (password reset, admin
+      # notifications).
+      - key: FRONTEND_URL
+        sync: false
+      # Left unset on purpose: app/__init__.py then falls back to
+      # Flask's own instance_path (backend/instance/uploads, same as
+      # local dev) -- ephemeral on Render's web service filesystem, per
+      # the storage caveat above. Only set this if the commented-out
+      # `disk:` block below is uncommented, to the disk's mountPath.
+      - key: MAX_CONTENT_LENGTH
+        value: "52428800"
+      # AI Farming Assistant: AI_PROVIDER=ollama (the local default) has
+      # no reachable Ollama server on Render, so production must use the
+      # Anthropic provider this app already supports (see
+      # app/services/ai_providers.py). Degrades gracefully (feature
+      # disabled, not a crash) if ANTHROPIC_API_KEY is left blank.
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: AI_MODEL
+        value: claude-sonnet-5
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # SMTP delivery for password-reset / admin-notification emails.
+      # Optional -- email_service.py degrades gracefully without it.
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USE_TLS
+        value: "true"
+      - key: MAIL_USE_SSL
+        value: "false"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAILS
+        sync: false
+    # Uncomment to make uploaded files (post images, profile photos,
+    # story images) survive redeploys -- requires a paid `plan:` above,
+    # and add UPLOAD_FOLDER=/var/data/uploads (matching mountPath) to
+    # envVars above once this is enabled.
+    # disk:
+    #   name: agricultural-uploads
+    #   mountPath: /var/data/uploads
+    #   sizeGB: 1
+
+  - type: web
+    name: agricultural-frontend
+    runtime: static
+    rootDir: frontend
+    branch: feature/Evans
+    buildCommand: "npm ci && npm run build"
+    staticPublishPath: ./dist
+    envVars:
+      # The backend's real deployed URL + /api, e.g.
+      # https://agricultural-backend.onrender.com/api. Only known after
+      # the backend's first deploy.
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_USE_MOCKS
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: cron
+    name: agricultural-story-cleanup
+    runtime: python
+    plan: free
+    rootDir: backend
+    branch: feature/Evans
+    # Hourly is a housekeeping cadence, not a correctness requirement --
+    # story_service.list_active_stories()/get_active_story_or_404()
+    # already exclude expired stories from every response regardless of
+    # how often (or whether) this job has run.
+    schedule: "0 * * * *"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python scripts/cleanup_expired_stories.py"
+    envVars:
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agricultural-db
+          property: connectionString
+
+databases:
+  - name: agricultural-db
+    plan: free
+    databaseName: agri_super_app
+    user: agri_super_app

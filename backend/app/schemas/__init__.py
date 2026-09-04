@@ -13,6 +13,7 @@ from .message_schema import (
 from .ai_schema import AIConversationSchema, AIConversationDetailSchema, AIMessageSchema
 from .notification_schema import NotificationSchema
 from .report_schema import ReportSchema
+from .story_schema import StorySchema
 
 # Single-object / collection instances, ready to import and use in routes.
 
@@ -51,3 +52,6 @@ notifications_schema = NotificationSchema(many=True)
 
 report_schema = ReportSchema()
 reports_schema = ReportSchema(many=True)
+
+story_schema = StorySchema()
+stories_schema = StorySchema(many=True)

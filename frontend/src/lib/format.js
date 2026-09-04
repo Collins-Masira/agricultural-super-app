@@ -10,7 +10,7 @@ const DATE_FORMAT_OPTS = {
 // with no "Z" or offset. `new Date(...)` treats a designator-less string as local
 // time per the ECMA-262 spec, so without this, every timestamp is shifted by the
 // browser's UTC offset. Append "Z" only when no timezone designator is already present.
-function asUtcDate(value) {
+export function asUtcDate(value) {
   if (typeof value === 'string' && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) {
     return new Date(`${value}Z`)
   }

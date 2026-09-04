@@ -7,6 +7,7 @@ from .community_routes import communities_bp
 from .message_routes import conversations_bp, messages_bp
 from .notification_routes import notifications_bp
 from .post_routes import comments_bp, posts_bp
+from .story_routes import stories_bp
 from .upload_routes import uploads_bp
 from .user_routes import users_bp
 
@@ -23,3 +24,4 @@ def register_blueprints(app):
     app.register_blueprint(admin_bp)
     app.register_blueprint(uploads_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(stories_bp)

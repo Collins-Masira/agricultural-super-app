@@ -154,6 +154,12 @@ class User(db.Model):
         cascade="all, delete-orphan"
     )
 
+    stories = db.relationship(
+        "Story",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
     # -------------------------
     # Password methods
     # -------------------------

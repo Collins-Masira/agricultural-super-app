@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Avatar } from '@/components/ui'
 import { XIcon } from '@/components/icons'
-import { formatRelativeTime } from '@/lib/format'
+import { asUtcDate, formatRelativeTime } from '@/lib/format'
 import '../stories.css'
 
 const SLIDE_DURATION_MS = 4500
 const TICK_MS = 60
+
+function isExpired(slide) {
+  return Boolean(slide) && asUtcDate(slide.expiresAt).getTime() <= Date.now()
+}
 
 export function StoryViewer({ stories, startIndex = 0, onClose }) {
   const [userIndex, setUserIndex] = useState(startIndex)
@@ -20,6 +24,15 @@ export function StoryViewer({ stories, startIndex = 0, onClose }) {
     setSlideIndex(0)
     setProgress(0)
   }, [userIndex])
+
+  // The backend is authoritative on expiration -- this only reacts to a
+  // story going stale (its 24h window lapsing) *while the viewer is
+  // already open*, by skipping straight past it, the same as if its
+  // slide duration had simply run out.
+  useEffect(() => {
+    if (isExpired(slide)) goNext()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slide])
 
   useEffect(() => {
     setProgress(0)
@@ -94,12 +107,8 @@ export function StoryViewer({ stories, startIndex = 0, onClose }) {
         </div>
 
         <div className="asa-story-viewer__media">
-          {slide.type === 'image' ? (
-            <img src={slide.imageUrl} alt="" />
-          ) : (
-            <div className="asa-story-viewer__text-slide">{slide.caption}</div>
-          )}
-          {slide.type === 'image' && slide.caption && <p className="asa-story-viewer__caption">{slide.caption}</p>}
+          <img src={slide.imageUrl} alt="" />
+          {slide.caption && <p className="asa-story-viewer__caption">{slide.caption}</p>}
 
           <button
             type="button"

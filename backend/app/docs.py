@@ -36,6 +36,7 @@ SWAGGER_TEMPLATE = {
         {"name": "Admin", "description": "Admin-only moderation and stats (role=admin)."},
         {"name": "Uploads", "description": "Image upload for posts and profiles."},
         {"name": "Notifications", "description": "In-app notifications for likes, comments, and follows."},
+        {"name": "Stories", "description": "24-hour photo updates."},
     ],
     "definitions": {
         "Error": {
@@ -264,6 +265,18 @@ SWAGGER_TEMPLATE = {
                 "reviewed_at": {"type": "string", "format": "date-time", "x-nullable": True},
                 "reporter": {"$ref": "#/definitions/UserPublic"},
                 "post": {"type": "object"},
+            },
+        },
+        "Story": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "user_id": {"type": "integer"},
+                "image_url": {"type": "string"},
+                "caption": {"type": "string", "x-nullable": True},
+                "created_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"},
+                "author": {"$ref": "#/definitions/UserPublic"},
             },
         },
     },

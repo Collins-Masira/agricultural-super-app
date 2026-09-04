@@ -69,7 +69,7 @@ export function FeedPage() {
           <strong>🌱 Farming tip:</strong> {tipOfTheDay()}
         </p>
 
-        {status === 'ready' && <StoryBar posts={posts} />}
+        <StoryBar />
 
         <Tabs items={FEED_FILTERS} value={filter} onChange={setFilter} className="asa-feed-filters" />
 

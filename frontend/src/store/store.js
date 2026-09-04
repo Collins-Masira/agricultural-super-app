@@ -8,6 +8,7 @@ import messagesReducer from './slices/messagesSlice'
 import adminReducer from './slices/adminSlice'
 import aiReducer from './slices/aiSlice'
 import notificationsReducer from './slices/notificationsSlice'
+import storiesReducer from './slices/storiesSlice'
 
 /**
  * Redux store for the Agricultural Super App frontend.
@@ -21,6 +22,7 @@ import notificationsReducer from './slices/notificationsSlice'
  * - messages    — conversations and messages
  * - ai          — AI Farming Assistant conversations and messages
  * - notifications — likes, comments, and follow notifications
+ * - stories      — 24-hour photo updates (StoryBar/StoryViewer)
  *
  * The slices call the service layer (src/services), which routes to the
  * in-repo mock data layer when VITE_USE_MOCKS=true, and to the real Flask
@@ -37,6 +39,7 @@ export const store = configureStore({
     admin: adminReducer,
     ai: aiReducer,
     notifications: notificationsReducer,
+    stories: storiesReducer,
   },
 })
 
