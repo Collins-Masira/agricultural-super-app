@@ -47,6 +47,39 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   return null
 })
 
+export const forgotPassword = createAsyncThunk(
+  'auth/forgotPassword',
+  async (email, { rejectWithValue }) => {
+    try {
+      return await authService.forgotPassword(email)
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Could not request a password reset.')
+    }
+  },
+)
+
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async ({ token, password }, { rejectWithValue }) => {
+    try {
+      return await authService.resetPassword(token, password)
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Could not reset your password.')
+    }
+  },
+)
+
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async ({ currentPassword, newPassword }, { rejectWithValue }) => {
+    try {
+      return await authService.changePassword(currentPassword, newPassword)
+    } catch (error) {
+      return rejectWithValue(error?.message ?? 'Could not change your password.')
+    }
+  },
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,

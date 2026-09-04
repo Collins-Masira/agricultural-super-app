@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, PasswordInput } from '@/components/ui'
 import { useAuth, errorMessage } from '@/features/auth/AuthContext'
 import { AuthLayout } from './AuthLayout'
 import './auth.css'
@@ -62,16 +62,18 @@ export function LoginPage() {
           error={fieldErrors.usernameOrEmail}
           placeholder="e.g. jane_kamau"
         />
-        <Input
+        <PasswordInput
           label="Password"
           name="password"
-          type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
           placeholder="Your password"
         />
+        <Link to="/forgot-password" className="asa-auth__forgot">
+          Forgot password?
+        </Link>
         {formError && (
           <p className="asa-auth__error" role="alert">
             {formError}

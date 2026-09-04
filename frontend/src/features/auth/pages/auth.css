@@ -1,46 +1,94 @@
 /* ==========================================================================
-   Authentication pages — styles
+   Authentication pages — split-panel layout (form + brand panel)
    ========================================================================== */
 
 .asa-auth {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-5);
   min-height: 100vh;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-5);
+  background-color: var(--color-bg);
+}
+
+.asa-auth__card {
+  display: flex;
+  width: 100%;
+  max-width: 64rem;
+  min-height: 38rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background-color: var(--color-surface);
+  animation: asa-auth-enter 0.5s ease-out both;
+}
+
+@keyframes asa-auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Form panel (left / only panel on mobile) ------------------------- */
+.asa-auth__form-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-6) var(--space-5);
 }
 
 .asa-auth__brand {
-  text-align: center;
-}
-
-.asa-auth__brand-link {
-  font-size: var(--font-size-2xl);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   text-decoration: none;
 }
 
-.asa-auth__brand-link span {
+.asa-auth__brand span {
   color: var(--color-primary);
 }
 
-.asa-auth__tagline {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+.asa-auth__brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
 }
 
-.asa-auth__card {
+.asa-auth__form-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 24rem;
   width: 100%;
-  max-width: 26rem;
+  margin: var(--space-6) auto;
+  animation: asa-auth-enter 0.5s 0.1s ease-out both;
+}
+
+.asa-auth__eyebrow {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
 }
 
 .asa-auth__title {
   margin: 0 0 var(--space-2);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-2xl);
 }
 
 .asa-auth__subtitle {
@@ -59,11 +107,166 @@
 }
 
 .asa-auth__footer {
+  margin: var(--space-5) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.asa-auth__footer a {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  background-image: linear-gradient(var(--color-primary), var(--color-primary));
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 2px;
+  transition: background-size var(--transition-base);
+}
+
+.asa-auth__footer a:hover {
+  background-size: 100% 2px;
+}
+
+.asa-auth__hint {
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
-.asa-auth__footer a {
+.asa-auth__linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  text-decoration: underline;
 }
+
+.asa-auth__forgot {
+  display: block;
+  margin: calc(var(--space-2) * -1) 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+/* ---- Brand panel (right, tablet+ only) --------------------------------- */
+.asa-auth__brand-panel {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  width: 48%;
+  flex-shrink: 0;
+  padding: var(--space-6);
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: #fff;
+  text-align: center;
+}
+
+@media (min-width: 48rem) {
+  .asa-auth__brand-panel {
+    display: flex;
+  }
+}
+
+.asa-auth__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.35;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.asa-auth__blob--1 {
+  top: -15%;
+  right: -15%;
+  width: 18rem;
+  height: 18rem;
+  background: radial-gradient(circle, var(--color-accent), transparent 70%);
+  animation: asa-auth-float-1 18s ease-in-out infinite;
+}
+
+.asa-auth__blob--2 {
+  bottom: -20%;
+  left: -15%;
+  width: 16rem;
+  height: 16rem;
+  background: radial-gradient(circle, #ffffff, transparent 70%);
+  opacity: 0.15;
+  animation: asa-auth-float-2 22s ease-in-out infinite;
+}
+
+@keyframes asa-auth-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-4%, 5%) scale(1.08); }
+}
+
+@keyframes asa-auth-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, -4%) scale(1.05); }
+}
+
+.asa-auth__hero-badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-full);
+  background-color: rgb(255 255 255 / 0.15);
+  border: 1px solid rgb(255 255 255 / 0.3);
+  color: #fff;
+  animation: asa-auth-sway 6s ease-in-out infinite;
+}
+
+@keyframes asa-auth-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.asa-auth__hero-text {
+  position: relative;
+  z-index: 1;
+  max-width: 22rem;
+}
+
+.asa-auth__hero-text h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.asa-auth__hero-text p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: rgb(255 255 255 / 0.85);
+  line-height: var(--line-height-normal);
+}
+
+.asa-auth__chip {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background-color: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: #fff;
+  animation: asa-auth-enter 0.5s ease-out both;
+}
+
+.asa-auth__chip--1 { animation-delay: 0.15s; }
+.asa-auth__chip--2 { animation-delay: 0.25s; }
+.asa-auth__chip--3 { animation-delay: 0.35s; }

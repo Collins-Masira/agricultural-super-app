@@ -3,6 +3,7 @@
 from marshmallow import EXCLUDE, fields, validate
 
 from app.extensions import ma
+from app.validators import marshmallow_password_validator
 
 
 class UserPublicSchema(ma.Schema):
@@ -60,18 +61,29 @@ class UserSchema(ma.Schema):
         validate=validate.Length(max=255),
     )
 
-    # Accepts the client-supplied plaintext password on load only.
-    # Hashing (User.set_password) happens in the service layer before
-    # persistence -- this field is never populated on dump, so the stored
+    # Accepts the client-supplied plaintext password on load only, under
+    # the wire key "password" (data_key). Internally keyed as
+    # password_hash because that's the User model's actual column --
+    # hashing (User.set_password) happens in the service layer before
+    # persistence. This field is never populated on dump, so the stored
     # hash can never leak in a response.
     password_hash = fields.String(
         required=True,
         load_only=True,
-        validate=validate.Length(min=8),
+        data_key="password",
+        validate=marshmallow_password_validator,
     )
 
+    # SECURITY: deliberately restricted to self-service-safe values.
+    # "admin" (or any future privileged role) must never be assignable
+    # through this schema -- every ownership-override check in the
+    # service layer trusts `role == "admin"`, so if this field accepted
+    # arbitrary strings, registration would double as a privilege
+    # escalation endpoint. Promoting a user to admin is a deliberate,
+    # out-of-band action (direct DB access for now; a dedicated
+    # admin-only endpoint is tracked in docs/TECHNICAL_DEBT.md).
     role = fields.String(
-        validate=validate.Length(max=30),
+        validate=validate.OneOf(["farmer", "expert"]),
         dump_default="farmer",
         load_default="farmer",
     )

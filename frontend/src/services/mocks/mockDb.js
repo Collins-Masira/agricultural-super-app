@@ -184,10 +184,99 @@ export const follows = [
   { followerId: 3, followingId: 4 },
 ]
 
+export const communities = [
+  {
+    id: 1,
+    name: 'Maize Growers Kenya',
+    description: 'A community for maize farmers to share tips on planting, pest control, and harvest.',
+    imageUrl: 'https://picsum.photos/seed/maize/800/400',
+    createdBy: 2,
+    members: [
+      { id: 1, userId: 1, communityId: 1, joinedAt: daysAgo(20) },
+      { id: 2, userId: 2, communityId: 1, joinedAt: daysAgo(25) },
+      { id: 3, userId: 3, communityId: 1, joinedAt: daysAgo(15) },
+    ],
+    isMember: true,
+    isFollowing: true,
+    createdAt: daysAgo(30),
+    updatedAt: daysAgo(1),
+  },
+  {
+    id: 2,
+    name: 'Avocado Farmers Network',
+    description: 'Connect with other avocado growers. Share best practices for avocado farming.',
+    imageUrl: 'https://picsum.photos/seed/avocado/800/400',
+    createdBy: 3,
+    members: [
+      { id: 4, userId: 3, communityId: 2, joinedAt: daysAgo(10) },
+      { id: 5, userId: 1, communityId: 2, joinedAt: daysAgo(5) },
+    ],
+    isMember: true,
+    isFollowing: false,
+    createdAt: daysAgo(15),
+    updatedAt: daysAgo(2),
+  },
+  {
+    id: 3,
+    name: 'Livestock Health Forum',
+    description: 'Discuss livestock health, vaccination schedules, and disease prevention.',
+    imageUrl: 'https://picsum.photos/seed/livestock/800/400',
+    createdBy: 4,
+    members: [
+      { id: 6, userId: 4, communityId: 3, joinedAt: daysAgo(20) },
+      { id: 7, userId: 1, communityId: 3, joinedAt: daysAgo(12) },
+    ],
+    isMember: true,
+    isFollowing: true,
+    createdAt: daysAgo(25),
+    updatedAt: daysAgo(3),
+  },
+]
+
+export const conversations = [
+  {
+    id: 1,
+    communityId: null,
+    createdBy: 1,
+    participants: [
+      { id: 1, conversationId: 1, userId: 1, joinedAt: daysAgo(5) },
+      { id: 2, conversationId: 1, userId: 2, joinedAt: daysAgo(5) },
+    ],
+    createdAt: daysAgo(5),
+    updatedAt: hoursAgo(2),
+  },
+  {
+    id: 2,
+    communityId: null,
+    createdBy: 1,
+    participants: [
+      { id: 3, conversationId: 2, userId: 1, joinedAt: daysAgo(3) },
+      { id: 4, conversationId: 2, userId: 4, joinedAt: daysAgo(3) },
+    ],
+    createdAt: daysAgo(3),
+    updatedAt: hoursAgo(8),
+  },
+]
+
+export const messages = [
+  { id: 1, conversationId: 1, senderId: 1, content: 'Hello Dr. Omena, I have a question about soil preparation.', isRead: true, createdAt: daysAgo(5) },
+  { id: 2, conversationId: 1, senderId: 2, content: 'Hi Jane! Sure, what would you like to know?', isRead: true, createdAt: daysAgo(5) },
+  { id: 3, conversationId: 1, senderId: 1, content: 'Should I add lime before or after composting?', isRead: true, createdAt: hoursAgo(20) },
+  { id: 4, conversationId: 1, senderId: 2, content: 'Add lime first, then compost after about a week. The lime needs time to adjust pH.', isRead: false, createdAt: hoursAgo(2) },
+  { id: 5, conversationId: 2, senderId: 1, content: 'Hi Prof, can you recommend a vaccination schedule for dairy cattle?', isRead: true, createdAt: daysAgo(3) },
+  { id: 6, conversationId: 2, senderId: 4, content: 'Sure! I will send you a schedule. When did you last vaccinate?', isRead: false, createdAt: hoursAgo(8) },
+]
+
+export const communityFollows = [
+  { userId: 1, communityId: 1 },
+  { userId: 1, communityId: 3 },
+  { userId: 3, communityId: 1 },
+]
+
 export const currentUserId = 1
 
 export function db() {
-  return { users, posts, comments, likes, follows }
+  return { users, posts, comments, likes, follows, communities, conversations, messages, communityFollows }
 }
 
 // Matches docs/schema.dbml: users in the seed may be experts (role 'expert').

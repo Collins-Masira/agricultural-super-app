@@ -1,0 +1,321 @@
+/* ==========================================================================
+   AI Farming Assistant — styles
+   ========================================================================== */
+
+.asa-assistant {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - 2 * var(--space-4));
+  min-height: 28rem;
+}
+
+.asa-assistant__disclaimer {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-info-soft);
+  color: var(--color-info);
+  font-size: var(--font-size-sm);
+}
+
+.asa-assistant__messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.asa-assistant-message {
+  display: flex;
+  max-width: 85%;
+}
+
+.asa-assistant-message--user {
+  align-self: flex-end;
+}
+
+.asa-assistant-message--assistant {
+  align-self: flex-start;
+}
+
+.asa-assistant-message__bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+.asa-assistant-message--user .asa-assistant-message__bubble {
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.asa-assistant-message--error .asa-assistant-message__bubble {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: transparent;
+}
+
+.asa-assistant__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.asa-assistant__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.asa-assistant__composer .asa-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.asa-assistant__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* Conversation list (AiAssistantPage) */
+
+.asa-ai-conversation-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.asa-ai-conversation-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asa-ai-conversation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.asa-ai-conversation-row:hover {
+  background-color: var(--color-surface-muted);
+}
+
+.asa-ai-conversation-item__name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asa-ai-conversation-item__time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* Floating assistant, mounted globally in AppLayout */
+
+.asa-floating-ai__trigger {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--bottom-nav-height) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+@media (min-width: 40rem) {
+  .asa-floating-ai__trigger {
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.asa-floating-ai__panel {
+  position: fixed;
+  right: var(--space-3);
+  left: var(--space-3);
+  bottom: calc(var(--bottom-nav-height) + var(--space-3) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  max-height: min(30rem, 72dvh);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+@media (min-width: 28rem) {
+  .asa-floating-ai__panel {
+    left: auto;
+    width: 22rem;
+  }
+}
+
+@media (min-width: 40rem) {
+  .asa-floating-ai__panel {
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.asa-floating-ai__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.asa-floating-ai__title {
+  flex: 1;
+  font-size: var(--font-size-sm);
+}
+
+.asa-floating-ai__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.asa-floating-ai__icon-btn:hover {
+  background-color: var(--color-surface-muted);
+}
+
+.asa-floating-ai__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  overflow-y: auto;
+}
+
+.asa-floating-ai__empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-2) 0;
+}
+
+.asa-floating-ai__conversations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.asa-floating-ai__conversations button {
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asa-floating-ai__conversations button:hover {
+  color: var(--color-primary);
+}
+
+.asa-floating-ai__full-link {
+  align-self: center;
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.asa-floating-ai__messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.asa-floating-ai-message {
+  max-width: 88%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+.asa-floating-ai-message--user {
+  align-self: flex-end;
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.asa-floating-ai-message--assistant {
+  align-self: flex-start;
+}
+
+.asa-floating-ai-message--error {
+  align-self: stretch;
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.asa-floating-ai__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.asa-floating-ai__composer .asa-field {
+  flex: 1;
+  margin-bottom: 0;
+}

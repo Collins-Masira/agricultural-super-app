@@ -33,7 +33,7 @@ These 12 tables are the complete contents of the official dbdiagram. They were e
 | `communities` | User-created communities | `name` (unique), `description`, `image_url`, `created_by` (FK → users), timestamps |
 | `community_members` | Membership in communities | `user_id` (FK), `community_id` (FK), unique `(user_id, community_id)` |
 | `user_follows` | Follow relationships | `follower_id` (FK), `following_id` (FK), unique `(follower_id, following_id)` |
-| `conversations` | Private conversations | timestamps |
+| `conversations` | Private conversations | `timestamps` (refined in [schema.dbml](../schema.dbml) with `community_id` for community threads and `created_by` for the initiating user) |
 | `conversation_participants` | Conversation membership | `conversation_id` (FK), `user_id` (FK), unique `(conversation_id, user_id)` |
 | `messages` | Messages within conversations | `conversation_id` (FK), `sender_id` (FK), `content`, `is_read`, `created_at` |
 
@@ -49,6 +49,7 @@ These 12 tables are the complete contents of the official dbdiagram. They were e
 - `user_follows.follower_id` → `users.id`; `user_follows.following_id` → `users.id`
 - `conversation_participants.conversation_id` → `conversations.id`; `conversation_participants.user_id` → `users.id`
 - `messages.conversation_id` → `conversations.id`; `messages.sender_id` → `users.id`
+- `conversations.created_by` → `users.id` (refinement in [schema.dbml](../schema.dbml); the initiator of the conversation)
 
 ---
 

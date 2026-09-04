@@ -1,20 +1,133 @@
 # app/config.py
 
 import os
+import tempfile
 
 
 class Config:
-    """Base application configuration.
-
-    The target database is PostgreSQL; supply a DATABASE_URL to override the
-    local development default. The DBMS has not been finalised in the schema
-    docs yet, so the connection is environment-driven.
+    """
+    Shared base configuration. Every value is overridable via environment
+    variable so the same codebase runs unmodified across dev/test/prod --
+    only the environment differs. Never instantiate this directly; use
+    get_config() to select a concrete subclass.
     """
 
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/agricultural_super_app",
+        "postgresql://postgres:postgres@localhost:5432/agri_super_app",
     )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+    JWT_ALGORITHM = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRES_SECONDS = int(
+        os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_SECONDS", 60 * 60 * 24)  # 24h
+    )
+
+    CORS_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost",
+        ).split(",")
+        if origin.strip()
+    ]
+
+    JSON_SORT_KEYS = False
+
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+    # Rate limiter storage. Production deployments should point this at a
+    # Redis instance (the default docker-compose setup exposes redis://).
+    # Falls back to an in-memory store, which is fine for single-process
+    # dev/test but not for horizontally-scaled production.
+    RATELIMIT_STORAGE_URI = os.environ.get(
+        "RATELIMIT_STORAGE_URI", "memory://"
+    )
+    RATELIMIT_STRATEGY = "fixed-window"
+    RATELIMIT_HEADERS_ENABLED = True
+
+    PASSWORD_RESET_TOKEN_EXPIRES_SECONDS = int(
+        os.environ.get("PASSWORD_RESET_TOKEN_EXPIRES_SECONDS", 60 * 60)  # 1h
+    )
+    AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama")
+    AI_MODEL = os.environ.get("AI_MODEL")
+
+    OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
+    # 50MB ceiling so video uploads (up to MAX_VIDEO_SIZE_BYTES in
+    # upload_service.py) aren't rejected by Flask before reaching that
+    # validation; the image upload path still enforces its own stricter
+    # 5MB limit regardless of this global ceiling.
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 50 * 1024 * 1024))  # 50MB
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").strip().lower() in ("true", "1", "yes")
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").strip().lower() in ("true", "1", "yes")
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    # Falls back to MAIL_USERNAME (the common case: sending account IS
+    # the "from" address) so this doesn't have to be set twice.
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
+
+    # Comma-separated admin email addresses notified when a new user
+    # registers (see auth_service.register_user). Empty by default --
+    # nobody is notified until this is explicitly set.
+    ADMIN_NOTIFICATION_EMAILS = [
+        email.strip()
+        for email in os.environ.get("ADMIN_NOTIFICATION_EMAILS", "").split(",")
+        if email.strip()
+    ]
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+
+class TestingConfig(Config):
+    """
+    Used by the test suite. Defaults to an in-memory SQLite database so
+    tests run fast and never touch a real database unless
+    TEST_DATABASE_URL is explicitly set (e.g. to run the suite against
+    real Postgres in CI).
+    """
+
+    TESTING = True
+    RATELIMIT_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "TEST_DATABASE_URL", "sqlite:///:memory:"
+    )
+    JWT_ACCESS_TOKEN_EXPIRES_SECONDS = 3600
+    UPLOAD_FOLDER = tempfile.mkdtemp(prefix="agri_super_app_test_uploads_")
+    MAIL_SERVER = "smtp.test.example.com"
+    MAIL_USERNAME = "test@example.com"
+    MAIL_PASSWORD = "test-password"
+    MAIL_DEFAULT_SENDER = "test@example.com"
+    MAIL_SUPPRESS_SEND = True
+    PROPAGATE_EXCEPTIONS = False
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+
+CONFIG_MAP = {
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig,
+}
+
+
+def get_config(config_name=None):
+    """
+    Resolve a config class by name, falling back to the FLASK_ENV
+    environment variable, then to DevelopmentConfig. Returns the class
+    itself (not an instance) -- Flask's app.config.from_object() reads
+    class attributes directly.
+    """
+    config_name = config_name or os.environ.get("FLASK_ENV", "default")
+    return CONFIG_MAP.get(config_name, DevelopmentConfig)

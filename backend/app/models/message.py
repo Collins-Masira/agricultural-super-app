@@ -1,6 +1,6 @@
 # app/models/message.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 
@@ -42,7 +42,7 @@ class Message(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 

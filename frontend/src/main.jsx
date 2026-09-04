@@ -5,6 +5,7 @@ import { store } from './store/store'
 import { App } from './App'
 import './styles/tokens.css'
 import './styles/global.css'
+import './styles/interactions.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

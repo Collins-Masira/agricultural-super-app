@@ -1,6 +1,6 @@
 # app/models/user.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
@@ -40,13 +40,13 @@ class User(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=utcnow
     )
 
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        default=utcnow,
+        onupdate=utcnow
     )
 
     # -------------------------
@@ -126,6 +126,32 @@ class User(db.Model):
         "Conversation",
         foreign_keys="Conversation.created_by",
         back_populates="creator"
+    )
+
+    ai_conversations = db.relationship(
+        "AIConversation",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    saved_posts = db.relationship(
+        "SavedPost",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    notifications_received = db.relationship(
+        "Notification",
+        foreign_keys="Notification.recipient_id",
+        back_populates="recipient",
+        cascade="all, delete-orphan"
+    )
+
+    reports_filed = db.relationship(
+        "Report",
+        foreign_keys="Report.reporter_id",
+        back_populates="reporter",
+        cascade="all, delete-orphan"
     )
 
     # -------------------------

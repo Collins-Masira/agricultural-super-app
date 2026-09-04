@@ -7,18 +7,19 @@
    ========================================================================== */
 
 :root {
-  /* Colour — neutrals (agricultural, earthy, high-contrast) */
-  --color-bg: #f7f5f0;
+  /* Colour — neutrals (clean, modern, only a hint of warmth) */
+  --color-bg: #f6f7f4;
   --color-surface: #ffffff;
-  --color-surface-muted: #efece4;
-  --color-text: #1c1a17;
-  --color-text-muted: #6b655c;
-  --color-border: #d8d2c6;
+  --color-surface-muted: #eef0ec;
+  --color-text: #1a1d1a;
+  --color-text-muted: #666e68;
+  --color-border: #dde1da;
 
   /* Colour — brand (green/earth accent) */
   --color-primary: #2f6b3a;
   --color-primary-hover: #27592f;
   --color-primary-contrast: #ffffff;
+  --color-primary-soft: #e4efe4;
   --color-accent: #b8860b;
   --color-accent-soft: #f6e9c8;
 
@@ -39,7 +40,8 @@
   --color-focus-ring: #2563a8;
 
   /* Typography */
-  --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, Oxygen, Ubuntu, Cantarell,
+    'Helvetica Neue', Arial, sans-serif;
   --font-size-xs: 0.75rem;   /* 12px */
   --font-size-sm: 0.875rem;  /* 14px */
   --font-size-md: 1rem;      /* 16px */
@@ -77,6 +79,12 @@
   --container-max: 60rem;
   --header-height: 3.75rem;
   --bottom-nav-height: 3.75rem;
+
+  /* Responsive breakpoints (documented reference values -- CSS custom
+     properties cannot be used inside @media conditions, so component
+     stylesheets repeat these literal values: 40rem mobile/desktop split
+     (header nav / bottom nav), 48rem tablet grids, 64rem desktop grids
+     and multi-column layouts such as the feed's suggestions rail). */
 
   /* Transitions */
   --transition-fast: 120ms ease;

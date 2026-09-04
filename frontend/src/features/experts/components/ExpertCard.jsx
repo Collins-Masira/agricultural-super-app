@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
 import { Avatar, Card } from '@/components/ui'
 import { VerifiedBadge } from '@/components/ui'
+import { useAuth } from '@/features/auth/AuthContext'
 import { FollowButton } from './FollowButton'
+import { MessageButton } from './MessageButton'
 import '../experts.css'
 
 export function ExpertCard({ expert, isFollowing }) {
+  const { user } = useAuth()
+  const isMe = expert.user.id === user?.user.id
   const name =
     expert.profile.firstName && expert.profile.lastName
       ? `${expert.profile.firstName} ${expert.profile.lastName}`
@@ -35,9 +39,12 @@ export function ExpertCard({ expert, isFollowing }) {
           {expert.profile.bio && <p className="asa-expert-card__bio">{expert.profile.bio}</p>}
         </div>
       </div>
-      <div className="asa-expert-card__actions">
-        <FollowButton userId={expert.user.id} isFollowing={isFollowing} />
-      </div>
+      {!isMe && (
+        <div className="asa-expert-card__actions">
+          <FollowButton userId={expert.user.id} isFollowing={isFollowing} />
+          <MessageButton userId={expert.user.id} />
+        </div>
+      )}
     </Card>
   )
 }

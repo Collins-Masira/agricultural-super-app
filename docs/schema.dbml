@@ -23,7 +23,7 @@
 // This file is the in-repository working schema for the current
 // MVP (the 12 tables verified in the supplied dbdiagram plus the
 // confirmed MVP refinements: community_follows, profiles.is_verified,
-// conversations.community_id). It is maintained here and is
+// conversations.community_id, conversations.created_by). It is maintained here and is
 // paste-able into dbdiagram.io to update the hosted diagram
 // (https://dbdiagram.io/d/Agricultural-Super-App-6a841d04fd15a881e5a6b86a).
 // ============================================================
@@ -38,6 +38,8 @@ Table users {
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
+
+Note: 'Allowed role values are farmer | expert | admin (per docs/database.md). Enforce with a CHECK (role IN (...)) constraint in the target DBMS once the engine is selected, and validate in the application layer.'
 
 Table profiles {
   id integer [pk, increment]
@@ -128,17 +130,20 @@ Table user_follows {
   created_at timestamp [default: `now()`]
 
   indexes {
-    (follower_id, following_id) [unique]
+    (follower_id, following_id) [unique, note: 'Prevents duplicate follows']
   }
 
-  Note: 'Self-follow is not allowed (follower_id != following_id)'
+  Note: 'Self-follow is not allowed. Enforce at the database level with CHECK (follower_id <> following_id) once the DBMS is selected, and validate in the application layer. Duplicate follows are prevented by the unique index on (follower_id, following_id).'
 }
 
 Table conversations {
   id integer [pk, increment]
-  community_id integer [null]
+  community_id integer [null]  // set for community/group threads; null for direct conversations
+  created_by integer [not null]  // user who initiated the conversation
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
+
+  Note: 'Messaging permission (MVP): a user may only initiate a conversation with / message a user they follow (user_follows) or a community they follow (community_follows). created_by records the initiating user so the backend can enforce this rule. Enforcement is application-layer because DBMS CHECK constraints cannot reference other tables.'
 }
 
 Table conversation_participants {
@@ -158,6 +163,38 @@ Table messages {
   sender_id integer [not null]
   content text [not null]
   is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+
+  Note: 'A message sender must be a participant in the conversation. This cross-table rule is enforced in the application layer.'
+}
+
+Table password_reset_tokens {
+  id integer [pk, increment]
+  user_id integer [not null]
+  token_hash varchar(64) [unique, not null]
+  expires_at timestamp [not null]
+  used_at timestamp [null]
+  created_at timestamp [default: `now()`]
+
+  Note: 'Stores only the SHA-256 hash of the raw reset token. The raw token is never recoverable from the database. Tokens are single-use (checked via used_at) and time-limited (checked via expires_at).'
+}
+
+// AI Farming Assistant conversations. Deliberately separate from
+// conversations/messages above (human-to-human messaging) -- an AI
+// turn has no sender_id/is_read/participants, just a role.
+Table ai_conversations {
+  id integer [pk, increment]
+  user_id integer [not null]
+  title varchar(255) [null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table ai_messages {
+  id integer [pk, increment]
+  conversation_id integer [not null]
+  role varchar(20) [not null]  // 'user' | 'assistant' | 'system'
+  content text [not null]
   created_at timestamp [default: `now()`]
 }
 
@@ -190,8 +227,14 @@ Ref: user_follows.following_id > users.id [delete: cascade]
 
 Ref: conversations.community_id > communities.id [delete: cascade]
 
+Ref: conversations.created_by > users.id [delete: restrict]
+
 Ref: conversation_participants.conversation_id > conversations.id [delete: cascade]
 Ref: conversation_participants.user_id > users.id [delete: cascade]
 
 Ref: messages.conversation_id > conversations.id [delete: cascade]
 Ref: messages.sender_id > users.id [delete: cascade]
+
+Ref: password_reset_tokens.user_id > users.id [delete: cascade]
+Ref: ai_conversations.user_id > users.id [delete: cascade]
+Ref: ai_messages.conversation_id > ai_conversations.id [delete: cascade]

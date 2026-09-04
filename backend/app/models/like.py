@@ -1,7 +1,9 @@
 # app/models/like.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
+
+REACTION_TYPES = ("like", "love", "funny", "wow", "sad", "fire")
 
 
 class Like(db.Model):
@@ -24,9 +26,16 @@ class Like(db.Model):
         nullable=False
     )
 
+    reaction_type = db.Column(
+        db.String(20),
+        nullable=False,
+        default="like",
+        server_default="like"
+    )
+
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
 
@@ -45,5 +54,9 @@ class Like(db.Model):
             "user_id",
             "post_id",
             name="unique_user_post_like"
+        ),
+        db.CheckConstraint(
+            f"reaction_type IN {REACTION_TYPES}",
+            name="ck_likes_reaction_type"
         ),
     )

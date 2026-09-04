@@ -1,117 +1,155 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button, Input, PageHeader, Textarea } from '@/components/ui'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Avatar, Button, ImageUploader, Textarea } from '@/components/ui'
+import { ClapperIcon, LeafIcon } from '@/components/icons'
 import { createPost } from '@/store/slices/postsSlice'
-import { useAppDispatch } from '@/store/hooks'
-import { errorMessage } from '@/features/auth/AuthContext'
+import { fetchCommunities, fetchCommunity } from '@/store/slices/communitiesSlice'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { useAuth, errorMessage } from '@/features/auth/AuthContext'
+import { deriveTitle } from '@/lib/format'
 import '../components/posts.css'
+
+function displayName(user) {
+  return user.profile.firstName && user.profile.lastName
+    ? `${user.profile.firstName} ${user.profile.lastName}`
+    : user.user.username
+}
 
 export function CreatePostPage() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const [title, setTitle] = useState('')
+  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const communityIdFromUrl = searchParams.get('communityId') ? Number(searchParams.get('communityId')) : null
+
+  const community = useAppSelector((state) => state.communities.current)
+  const communities = useAppSelector((state) => state.communities.list)
+  const myCommunities = useMemo(() => communities.filter((c) => c.myRole), [communities])
+
   const [content, setContent] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
   const [imageUrls, setImageUrls] = useState([])
-  const [fieldErrors, setFieldErrors] = useState({})
+  const [imagesUploading, setImagesUploading] = useState(false)
+  const [isAnnouncement, setIsAnnouncement] = useState(false)
+  const [pickedCommunityId, setPickedCommunityId] = useState('')
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  function addImage() {
-    const trimmed = imageUrl.trim()
-    if (!trimmed) return
-    if (imageUrls.includes(trimmed)) return
-    setImageUrls((prev) => [...prev, trimmed])
-    setImageUrl('')
-  }
+  useEffect(() => {
+    if (communityIdFromUrl) dispatch(fetchCommunity(communityIdFromUrl))
+    else dispatch(fetchCommunities({ page: 1, pageSize: 50 }))
+  }, [dispatch, communityIdFromUrl])
 
-  function removeImage(url) {
-    setImageUrls((prev) => prev.filter((u) => u !== url))
-  }
-
-  function validate() {
-    const errors = {}
-    if (!title.trim()) errors.title = 'Please add a title.'
-    if (!content.trim()) errors.content = 'Please add some content.'
-    setFieldErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+  const communityId = communityIdFromUrl || (pickedCommunityId ? Number(pickedCommunityId) : null)
+  const activeCommunity = communityIdFromUrl
+    ? (community?.id === communityIdFromUrl ? community : null)
+    : myCommunities.find((c) => c.id === communityId) ?? null
+  const canPostAnnouncement = Boolean(activeCommunity && activeCommunity.myRole === 'admin')
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!validate() || submitting) return
+    const trimmed = content.trim()
+    if (!trimmed || submitting || imagesUploading) return
     setSubmitting(true)
     setFormError(null)
     try {
       const post = await dispatch(
-        createPost({ title: title.trim(), content: content.trim(), imageUrls }),
+        createPost({
+          title: deriveTitle(trimmed),
+          content: trimmed,
+          imageUrls,
+          communityId,
+          isAnnouncement: canPostAnnouncement && isAnnouncement,
+        }),
       ).unwrap()
-      navigate(`/posts/${post.id}`, { replace: true })
+      navigate(communityId ? `/communities/${communityId}` : `/posts/${post.id}`, { replace: true })
     } catch (error) {
       setFormError(errorMessage(error))
       setSubmitting(false)
     }
   }
 
+  const heading = communityId
+    ? (canPostAnnouncement && isAnnouncement ? 'New announcement' : `Post to ${activeCommunity?.name ?? 'community'}`)
+    : 'Create post'
+
   return (
-    <>
-      <PageHeader title="New post" subtitle="Share knowledge with the community." />
-      <form onSubmit={handleSubmit} noValidate>
-        <Input
-          label="Title"
-          name="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          error={fieldErrors.title}
-          placeholder="e.g. Preparing your soil before the rains"
-        />
+    <div className="asa-social-composer">
+      <h1 className="asa-social-composer__heading">{heading}</h1>
+
+      <form onSubmit={handleSubmit}>
+        {user && (
+          <div className="asa-social-composer__author">
+            <Avatar imageUrl={user.profile.profileImageUrl} name={displayName(user)} username={user.user.username} size="md" />
+            <strong>{displayName(user)}</strong>
+          </div>
+        )}
+
         <Textarea
-          label="Content"
+          label=""
           name="content"
-          rows={8}
+          aria-label="Post caption"
+          rows={5}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          error={fieldErrors.content}
-          placeholder="What would you like to share?"
+          placeholder="What's happening on your farm? 🌱"
+          className="asa-social-composer__textarea"
+          autoFocus
         />
 
-        <div className="asa-post-create__images">
-          <label className="asa-field__label">Images (optional)</label>
-          <div className="asa-post-create__image-input">
-            <Input
-              label=""
-              name="imageUrl"
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="Paste an image URL"
-              aria-label="Image URL"
-            />
-            <Button type="button" variant="secondary" size="sm" onClick={addImage} disabled={!imageUrl.trim()}>
-              Add
-            </Button>
-          </div>
+        <ImageUploader multiple maxFiles={6} onChange={setImageUrls} onBusyChange={setImagesUploading} />
 
-          {imageUrls.length > 0 && (
-            <ul className="asa-post-create__image-list">
-              {imageUrls.map((url) => (
-                <li key={url} className="asa-post-create__image-item">
-                  <img src={url} alt="" />
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeImage(url)} aria-label="Remove image">
-                    &times;
-                  </Button>
-                </li>
-              ))}
-            </ul>
+        <div className="asa-social-composer__attachments">
+          <button
+            type="button"
+            className="asa-social-composer__attachment"
+            onClick={() => navigate('/create/reel')}
+          >
+            <ClapperIcon width={18} height={18} />
+            Video (Reel)
+          </button>
+
+          {myCommunities.length > 0 && !communityIdFromUrl && (
+            <label className="asa-social-composer__attachment asa-social-composer__attachment--select">
+              <LeafIcon width={18} height={18} />
+              <select value={pickedCommunityId} onChange={(event) => setPickedCommunityId(event.target.value)}>
+                <option value="">Your feed</option>
+                {myCommunities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
 
+        {canPostAnnouncement && (
+          <label className="asa-quick-composer__announcement">
+            <input
+              type="checkbox"
+              checked={isAnnouncement}
+              onChange={(event) => setIsAnnouncement(event.target.checked)}
+            />
+            <span>📢 Post as community announcement</span>
+          </label>
+        )}
+
         {formError && <p className="asa-form-error" role="alert">{formError}</p>}
 
-        <Button type="submit" loading={submitting} disabled={submitting}>
-          Publish post
-        </Button>
+        <div className="asa-composer__submit-row">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={submitting}
+            onClick={() => navigate(communityId ? `/communities/${communityId}` : '/', { replace: true })}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" loading={submitting} disabled={submitting || imagesUploading || !content.trim()}>
+            {imagesUploading ? 'Uploading photos…' : 'Post'}
+          </Button>
+        </div>
       </form>
-    </>
+    </div>
   )
 }

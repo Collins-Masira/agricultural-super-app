@@ -13,3 +13,9 @@ from .user_follow import UserFollow
 from .conversation import Conversation
 from .conversation_participant import ConversationParticipant
 from .message import Message
+from .password_reset_token import PasswordResetToken
+from .ai_conversation import AIConversation
+from .ai_message import AIMessage
+from .saved_post import SavedPost
+from .notification import Notification
+from .report import Report

@@ -1,6 +1,6 @@
 # app/models/community_follow.py
 
-from datetime import datetime
+from app.extensions import utcnow
 from app.extensions import db
 
 
@@ -26,7 +26,7 @@ class CommunityFollow(db.Model):
 
     followed_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=utcnow
     )
 
     follower = db.relationship(

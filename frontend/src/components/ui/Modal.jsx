@@ -5,6 +5,8 @@ import './ui.css'
 
 export function Modal({ open, title, onClose, children }) {
   const dialogRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -13,7 +15,7 @@ export function Modal({ open, title, onClose, children }) {
     dialogRef.current?.focus()
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
 
     document.addEventListener('keydown', handleKeyDown)
@@ -21,7 +23,7 @@ export function Modal({ open, title, onClose, children }) {
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
